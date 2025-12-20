@@ -1,0 +1,19 @@
+so before the changes the combat sequence is pretty basic choosing support eidolon (IMG_support) -> IMG_GO_QUEST -> IMG_ATTACK -> wait_for_battle_end() but when raiding there are 2 branch the one that can be rescued (IMG_rescue) and not (but likely i will be defeated or died so go to died in raid sequence)
+
+raid sequence{
+select raid -> ongoing raid check -> ok or challenge (some raid use challenge button, the other use ok button) -> check stamina -> battle sequence (after choosing eidolon support (IMG_SUPPORT) there are an support request (image name KHR_support_request) so need to modify battle sequence a bit) -> rescue if exist -> wait until complete (both rescue and win has an OK outcome except the died outcome) -> return raid
+
+died in raid sequence{
+replenish elixir (IMG_DEFEAT_ELIXIR) (click cancel) -> give up prompt (defeat screen) (click cancel) -> this is for rescue (so in raid sequence if there is button rescue click it then the rescue prompt will pop up and has cancel and ok (which is inactive until 5 minute) if (ok grey wait until OK available (ok grey is KHR_ok_inactive.png) -> if not then resuscitation -> replenish elixir (cancel) -> give up prompt (quest list)
+why do i do that because if i am died before rescue is available the revive with elixir and defeat screen will pop up but the rescue prompt will not be closed, so need to close those 2 the revive using elixir and give up promp then you will see the rescue prompt and wait until OK is available
+
+add an variable RESCUE boolean
+if RESCUE FALSE then when died cancel (revive elixir) -> quest list (give up prompt)
+if RESCUE TRUE then when died cancel (revive elixir) -> cancel (give up promp) -> waiting OK available for rescue
+
+if farm start raid
+when died go to quest (is on going raid battle not raid quest) -> raid quest -> pop up on going quest (cancel) -> the last element -> pop up (if it is still on going cancel if it is unconfirmed raid (already defeated) click batch check -> OK (if first time reward) unconfirmed)
+
+pop up ongoing raid (check)
+if it is not batch check -> cancel
+if it is batch check -> ok for first time rewards
