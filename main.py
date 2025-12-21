@@ -92,9 +92,9 @@ ctk.CTkButton(ctrl_frame, text="RESET", fg_color="orange", width=120, command=re
 mode_frame = ctk.CTkFrame(app)
 mode_frame.pack(fill="x", padx=10, pady=5)
 # create buttons and keep references so we can disable/enable them while a sequence runs
-raid_btn = ctk.CTkButton(mode_frame, text="Raid Rot", width=120, command=lambda: start_mode(logic.raid_host_rotation, "raid", log, ELEMENTS, IMAGES, get_img))
+raid_btn = ctk.CTkButton(mode_frame, text="Raid Host", width=120, command=lambda: start_mode(logic.raid_host_rotation, "raid", log, ELEMENTS, IMAGES, get_img))
 raid_btn.grid(row=0, column=0, padx=2, pady=2)
-epic_btn = ctk.CTkButton(mode_frame, text="Epic Rush", width=120, command=lambda: start_mode(logic.epic_quest_rush, "epic", log, IMAGES))
+epic_btn = ctk.CTkButton(mode_frame, text="Epic Quest Rush", width=120, command=lambda: start_mode(logic.epic_quest_rush, "epic", log, IMAGES))
 epic_btn.grid(row=0, column=1, padx=2, pady=2)
 retry_btn = ctk.CTkButton(mode_frame, text="Retry Farm", width=120, command=lambda: start_mode(logic.farm_loop, "farm", log, IMAGES))
 retry_btn.grid(row=1, column=0, padx=2, pady=2)
