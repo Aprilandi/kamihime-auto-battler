@@ -71,80 +71,24 @@ def find_and_click(image, timeout=SLEEP, confidence=CONFIDENCE, max_attempts=1, 
     return False
 
 
-def wait_for_ok(IMAGES, log_widget=None, times=1, timeout=20, rescue_active=False):
-    """Click OK up to `times` times, waiting up to `timeout` seconds for each OK to appear.
+def _clear_ok_multiple(IMAGES, log_widget=None, max_clicks=6):
+    """Click OK repeatedly (up to max_clicks) while it appears on screen.
 
-    Returns True if at least one OK was clicked, False otherwise.
+    Returns the number of OK clicks performed.
     """
-    clicked_any = False
-    end_time = time.time() + timeout
-    while times > 0 and time.time() < end_time and state.get("running", False):
-        log_msg(f"Waiting for result interaction (OK)...", log_widget)
-        # Only look for the active OK button. While waiting, also watch for
-        # defeat-related dialogs (death/elixir) so we can handle the died-in-raid
-        # sequence centrally here.
+    clicks = 0
+    while clicks < max_clicks and state.get("running", False):
         ok = IMAGES.get("ok")
         if ok and pyautogui.locateOnScreen(ok, confidence=CONFIDENCE):
-            find_and_click(ok, timeout=0.4, confidence=CONFIDENCE, max_attempts=3, log_widget=log_widget)
-            clicked_any = True
-            times -= 1
-            # short pause between clicks
-            time.sleep(0.4)
-            continue
-
-        # If a defeat-with-revive prompt appears (elixir prompt), handle the died-in-raid flow:
-        # 1) defeat_elixir (revive using elixir) -> press cancel
-        # 2) defeat (defeat screen / give up prompt) -> press cancel
-        # After both cancels, if rescue is enabled we continue waiting for OK (rescue prompt will reappear).
-        # If rescue is disabled, press quest_list and stop waiting.
-        if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
-            log_msg("Defeat - revive (elixir) prompt shown while waiting for OK, cancelling revive...", log_widget)
-            if IMAGES.get("cancel"):
-                time.sleep(SLEEP)
-                find_and_click(IMAGES["cancel"], timeout=0.6, max_attempts=3, log_widget=log_widget)
-            time.sleep(0.4)
-
-            # Now if the defeat/give-up screen appears, handle it
-            if IMAGES.get("defeat") and pyautogui.locateOnScreen(IMAGES["defeat"], confidence=CONFIDENCE):
-                log_msg("Defeat screen present after revive cancel, handling...", log_widget)
-                # If rescue was not active for this battle (either image absent or user disabled),
-                # press quest_list (give up) and stop waiting.
-                if not rescue_active:
-                    log_msg("Rescue not active - pressing quest_list and aborting wait_for_ok", log_widget)
-                    if IMAGES.get("quest_list"):
-                        time.sleep(SLEEP)
-                        find_and_click(IMAGES["quest_list"], timeout=0.6, max_attempts=3, log_widget=log_widget)
-                    return clicked_any
-
-                # Otherwise press cancel to close the defeat screen and continue waiting for rescue OK
-                if IMAGES.get("cancel"):
-                    time.sleep(SLEEP)
-                    find_and_click(IMAGES["cancel"], timeout=0.6, max_attempts=3, log_widget=log_widget)
-                time.sleep(0.6)
-
-            # After handling revive/defeat, continue waiting for OK (rescue prompt)
+            find_and_click(ok, timeout=0.3, confidence=CONFIDENCE, max_attempts=3, log_widget=log_widget)
+            clicks += 1
             time.sleep(0.3)
             continue
+        break
+    return clicks
 
-        # If a plain defeat screen appears (without elixir prompt), handle similarly
-        if IMAGES.get("defeat") and pyautogui.locateOnScreen(IMAGES["defeat"], confidence=CONFIDENCE):
-            log_msg("Defeat screen detected while waiting for OK", log_widget)
-            if not rescue_active:
-                log_msg("Rescue not active - pressing quest_list and aborting wait_for_ok", log_widget)
-                if IMAGES.get("quest_list"):
-                    time.sleep(SLEEP)
-                    find_and_click(IMAGES["quest_list"], timeout=0.6, max_attempts=3, log_widget=log_widget)
-                return clicked_any
-            # rescue active -> cancel defeat screen and continue waiting
-            if IMAGES.get("cancel"):
-                time.sleep(SLEEP)
-                find_and_click(IMAGES["cancel"], timeout=0.6, max_attempts=3, log_widget=log_widget)
-            time.sleep(0.6)
 
-        # fallback: small sleep until OK appears
-        time.sleep(0.3)
 
-    return clicked_any
 
 
 def wait_for_image(image, confidence=CONFIDENCE, timeout=10):
@@ -178,17 +122,65 @@ def wait_for_battle_end(IMAGES, log_widget=None):
 
     This function is intentionally defensive: it tries several known dialogs then clicks OK up to 6 times.
     """
-    # Click OK multiple times to clear rewards/scoreboard/first-time dialogs
-    # defeat/elixir handling has been centralized in wait_for_ok so here we only
-    # repeatedly attempt to clear remaining OK dialogs.
-    wait_clicks = 6
-    for _ in range(wait_clicks):
-        if not state.get("running", False):
+    # Click OK multiple times to clear rewards/scoreboard/first-time dialogs.
+    # The function now also handles defeat/rescue flow centrally (if a defeat
+    # dialog appears during the waiting period).
+    end_time = time.time() + 60
+    while time.time() < end_time and state.get("running", False):
+        # If return is present, battle finished and we can break
+        if IMAGES.get("return") and pyautogui.locateOnScreen(IMAGES["return"], confidence=CONFIDENCE):
+            log_msg("Return button detected - finishing battle end handling", log_widget)
             break
-        clicked = wait_for_ok(IMAGES, log_widget=log_widget, times=1, timeout=6)
-        if not clicked:
-            # if no OK found for a while, break
+
+        # If retry appears (some flows show retry instead of return), treat as finished
+        if IMAGES.get("retry") and pyautogui.locateOnScreen(IMAGES["retry"], confidence=CONFIDENCE):
+            log_msg("Retry detected - finishing battle end handling", log_widget)
             break
+
+        # If OK appears, clear OK repeatedly (rewards / multiple dialogs)
+        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
+            log_msg("OK detected - clearing OK dialogs...", log_widget)
+            _clear_ok_multiple(IMAGES, log_widget=log_widget, max_clicks=8)
+            # after clearing OKs, continue to re-evaluate other end conditions
+            time.sleep(0.4)
+            continue
+
+        # If defeat/dialogs appear, handle rescue/defeat here (centralized)
+        # NOTE: the combat_sequence should set state['rescue_active_for_current_battle'] before calling this
+        if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
+            log_msg("Defeat - revive (elixir) prompt detected during battle end", log_widget)
+            if IMAGES.get("cancel"):
+                find_and_click(IMAGES["cancel"], timeout=0.6, max_attempts=3, log_widget=log_widget)
+            time.sleep(0.4)
+            # check for defeat screen next
+            if IMAGES.get("defeat") and pyautogui.locateOnScreen(IMAGES["defeat"], confidence=CONFIDENCE):
+                log_msg("Defeat screen present after revive cancel", log_widget)
+                # If rescue was not active for this battle, press quest_list and stop
+                rescue_active = state.get("rescue_active_for_current_battle", False)
+                if not rescue_active:
+                    log_msg("Rescue not active for this battle - pressing quest_list", log_widget)
+                    if IMAGES.get("quest_list"):
+                        find_and_click(IMAGES["quest_list"], timeout=0.6, max_attempts=3, log_widget=log_widget)
+                    return
+                # otherwise, cancel defeat screen and continue waiting for rescue flow
+                if IMAGES.get("cancel"):
+                    find_and_click(IMAGES["cancel"], timeout=0.6, max_attempts=3, log_widget=log_widget)
+                time.sleep(0.6)
+            continue
+
+        if IMAGES.get("defeat") and pyautogui.locateOnScreen(IMAGES["defeat"], confidence=CONFIDENCE):
+            log_msg("Defeat screen detected during battle end", log_widget)
+            rescue_active = state.get("rescue_active_for_current_battle", False)
+            if not rescue_active:
+                log_msg("Rescue not active for this battle - pressing quest_list", log_widget)
+                if IMAGES.get("quest_list"):
+                    find_and_click(IMAGES["quest_list"], timeout=0.6, max_attempts=3, log_widget=log_widget)
+                return
+            if IMAGES.get("cancel"):
+                find_and_click(IMAGES["cancel"], timeout=0.6, max_attempts=3, log_widget=log_widget)
+            time.sleep(0.6)
+
+        time.sleep(0.3)
 
 
 def combat_sequence(log_widget, IMAGES, get_img=None, RESCUE=True):
@@ -249,9 +241,12 @@ def combat_sequence(log_widget, IMAGES, get_img=None, RESCUE=True):
                 else:
                     log_msg("Rescue available but user disabled rescue - not clicking", log_widget)
 
-            # Wait for OK and let wait_for_ok handle the defeat/rescue sequence. Pass the computed
-            # `rescue_active` so the function knows whether to attempt rescue flow or abort to quest list.
-            wait_for_ok(IMAGES, log_widget=log_widget, rescue_active=rescue_active)
+            # Set a transient state flag that tells the battle-end handler whether
+            # rescue is allowed for this battle. This will be read by
+            # `wait_for_battle_end` to decide defeat behavior.
+            state["rescue_active_for_current_battle"] = rescue_active
+            # Wait for the battle to finish and let wait_for_battle_end handle OKs/defeat
+            wait_for_battle_end(IMAGES, log_widget)
             
 
     # Wait for battle to finish and clear dialogs
@@ -287,28 +282,34 @@ def epic_quest_rush(log_widget, IMAGES):
             log_msg("starting story...", log_widget)
             time.sleep(SLEEP)
             find_and_click(IMAGES["story_start"], timeout=4.0, max_attempts=2, log_widget=log_widget)
-            time.sleep(0.25)
+
             # stamina check after starting a story/quest
+            time.sleep(2.0)
             check_stamina(IMAGES, log_widget)
 
             # Story skip flow
             time.sleep(2)
-            if IMAGES.get("skip") and pyautogui.locateOnScreen(IMAGES["skip"], confidence=CONFIDENCE):
-                log_msg("Branch story...", log_widget)
-                find_and_click(IMAGES["skip"], timeout=0.5, max_attempts=2, log_widget=log_widget)
-                time.sleep(0.18)
-                # Skip confirmation
-                if IMAGES.get("skip_confirm") and pyautogui.locateOnScreen(IMAGES["skip_confirm"], confidence=CONFIDENCE):
-                    if find_and_click(IMAGES["skip_confirm"], timeout=0.5, max_attempts=2, log_widget=log_widget):
-                        find_and_click(IMAGES["return"], timeout=2.0, max_attempts=3, log_widget=log_widget)
-                        time.sleep(0.9)
-                        find_and_click(IMAGES["ok"], max_attempts=2, log_widget=log_widget)
-            else:
-                # Normal combat branch
-                log_msg("Branch combat...", log_widget)
-                combat_sequence(log_widget, IMAGES)
-                time.sleep(SLEEP)
-                find_and_click(IMAGES["return"], max_attempts=3, log_widget=log_widget)
+            while state.get("running", False):
+                if IMAGES.get("skip") and pyautogui.locateOnScreen(IMAGES["skip"], confidence=CONFIDENCE):
+                    log_msg("Branch story...", log_widget)
+                    find_and_click(IMAGES["skip"], timeout=0.5, max_attempts=2, log_widget=log_widget)
+                    time.sleep(0.5)
+                    find_and_click(IMAGES["skip_confirm"], timeout=0.5, max_attempts=2, log_widget=log_widget)
+                    break
+                    
+                elif IMAGES.get("support") and pyautogui.locateOnScreen(IMAGES["support"], confidence=CONFIDENCE):
+                    # Normal combat branch
+                    log_msg("Branch combat...", log_widget)
+                    combat_sequence(log_widget, IMAGES)
+                    break
+
+                time.sleep(2.0)
+
+            time.sleep(SLEEP)
+            find_and_click(IMAGES["return"], timeout=2.0, max_attempts=3, log_widget=log_widget)
+            time.sleep(SLEEP)
+            find_and_click(IMAGES["ok"], max_attempts=2, log_widget=log_widget)
+
 
 
 def raid_host_rotation(log_widget, ELEMENTS, IMAGES, get_img):

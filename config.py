@@ -36,7 +36,7 @@ IMAGES = {
     "stamina_check": get_img('KHR_stamina_check'),
     "stamina_use": get_img('KHR_stamina_use'),
     "ongoing": get_img('KHR_give_up_resume'),
-        "quest_list": get_img('KHR_quest_list'),
+    "quest_list": get_img('KHR_quest_list'),
     "batch": get_img('KHR_batch_check'),
     "down": get_img('KHR_down'),
     "down_max": get_img('KHR_down_max'),
