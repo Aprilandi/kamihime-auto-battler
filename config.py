@@ -30,6 +30,7 @@ IMAGES = {
     "ok": get_img('KHR_ok'),
     "ok_inactive": get_img('KHR_ok_inactive'),
     "return": get_img('KHR_return'),
+    "return_raid": get_img('KHR_return_raid'),
     "retry": get_img('KHR_retry'),
     "defeat": get_img('KHR_defeat_screen'),
     "defeat_elixir": get_img('KHR_defeat_continue'),

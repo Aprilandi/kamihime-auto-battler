@@ -87,7 +87,29 @@ def _clear_ok_multiple(IMAGES, log_widget=None, max_clicks=6):
         break
     return clicks
 
+def ongoing_raids(IMAGES, log_widget=None, timeout=1.0, attempts=1):
+    """Check for ongoing raids dialog and click resume if found.
 
+    Returns True if an ongoing raid was detected and resumed.
+    """
+    log_msg("Checking for ongoing or completed raids...", log_widget)
+    tried = 0
+    while tried < attempts and state.get("running", False):
+        start_time = time.time()
+        while time.time() - start_time < timeout and state.get("running", False):
+            if IMAGES.get("ongoing") and pyautogui.locateOnScreen(IMAGES["ongoing"], confidence=CONFIDENCE):
+                log_msg("Ongoing raid detected, cancelling", log_widget)
+                find_and_click(IMAGES["cancel"], timeout=0.5, max_attempts=3, log_widget=log_widget)
+                time.sleep(SLEEP)
+                return False
+            elif IMAGES.get("batch") and pyautogui.locateOnScreen(IMAGES["batch"], confidence=CONFIDENCE):
+                log_msg("Batch raid detected, completing", log_widget)
+                find_and_click(IMAGES["batch"], timeout=0.5, max_attempts=3, log_widget=log_widget)
+                time.sleep(SLEEP)
+                return True
+            time.sleep(0.3)
+        tried += 1
+    return False
 
 
 
@@ -312,130 +334,138 @@ def epic_quest_rush(log_widget, IMAGES):
 
 
 
+def try_page_down(IMAGES):
+    down = IMAGES.get("down") and pyautogui.locateOnScreen(
+        IMAGES["down"],
+        confidence=0.88
+    )
+
+    if not down:
+        return False
+
+    if IMAGES.get("down_max") and pyautogui.locateOnScreen(
+        IMAGES["down_max"],
+        region=down,
+        confidence=0.9
+    ):
+        return False
+
+    pyautogui.click(down)
+    time.sleep(1.2)
+    return True
+
+def try_enter_raid(el, diff, IMAGES, log_widget):
+    log_msg(f"Entering {el} {diff}", log_widget)
+
+    # 1️⃣ Ongoing raid must appear first
+    for _ in range(3):
+        if not state.get("running"):
+            return "abort"
+
+        if ongoing_raids(IMAGES, log_widget):
+            break
+        time.sleep(0.4)
+    else:
+        log_msg("No ongoing raid detected", log_widget)
+        return "abort"
+
+    # 2️⃣ Resolve entry outcome
+    for _ in range(4):
+        if not state.get("running"):
+            return "abort"
+
+        if IMAGES.get("limit") and pyautogui.locateOnScreen(IMAGES["limit"], confidence=CONFIDENCE):
+            log_msg("Entry blocked: limit reached", log_widget)
+            find_and_click(IMAGES.get("ok"), timeout=0.6, max_attempts=2, log_widget=log_widget)
+            return "limit"
+
+        if IMAGES.get("condition") and pyautogui.locateOnScreen(IMAGES["condition"], confidence=CONFIDENCE):
+            log_msg("Entry blocked: condition not met", log_widget)
+            for key in ("ok", "challenge", "cancel"):
+                if IMAGES.get(key):
+                    find_and_click(IMAGES[key], timeout=0.6, max_attempts=2, log_widget=log_widget)
+                    break
+            return "condition"
+
+        if IMAGES.get("challenge") and pyautogui.locateOnScreen(IMAGES["challenge"], confidence=CONFIDENCE):
+            find_and_click(IMAGES["challenge"], timeout=0.6, max_attempts=2, log_widget=log_widget)
+            check_stamina(IMAGES, log_widget)
+            return "start"
+
+        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
+            find_and_click(IMAGES["ok"], timeout=0.6, max_attempts=2, log_widget=log_widget)
+            check_stamina(IMAGES, log_widget)
+            return "start"
+
+        time.sleep(0.4)
+
+    return "abort"
+
+def run_combat(el, diff, IMAGES, log_widget, host=True):
+    log_msg("In Battle...", log_widget)
+
+    while state.get("running"):
+        combat_sequence(log_widget, IMAGES, get_img)
+
+        if IMAGES.get("return_raid") and pyautogui.locateOnScreen(IMAGES["return_raid"], confidence=0.8):
+            find_and_click(IMAGES["return_raid"], max_attempts=3, log_widget=log_widget)
+            if host:
+                state["completed_raids"][el][diff] += 1
+            _inc_loop("raid", log_widget)
+            return
+
+        time.sleep(1.5)
+
+
 def raid_host_rotation(log_widget, ELEMENTS, IMAGES, get_img):
     log_msg("STARTING RAID ROTATION", log_widget)
 
-    for index, el in enumerate(ELEMENTS):
-        if not state.get("running", False):
-            break
+    for idx, el in enumerate(ELEMENTS):
+        if not state.get("running"):
+            return
 
-        # Tab selection
-        if index > 0:
-            tab_img = get_img(f"KHR_raid_{el}")
-            tab_loc = pyautogui.locateCenterOnScreen(tab_img, confidence=0.8)
-            if tab_loc:
-                pyautogui.click(tab_loc)
-                time.sleep(2.5)
+        # Select element tab
+        if idx > 0:
+            tab = pyautogui.locateCenterOnScreen(
+                get_img(f"KHR_raid_{el}"),
+                confidence=0.9
+            )
+            if tab:
+                pyautogui.click(tab)
+                time.sleep(1.5)
 
-        element_finished = False
-        while not element_finished and state.get("running", False):
-            found_any = False
-            for diff in list(state["raid_settings"].get(el, {})):
-                # support counters: completed_raids stores an int count per difficulty
-                max_runs = state.get("max_runs", {}).get(el, 1)
-                completed = state["completed_raids"].get(el, {}).get(diff, 0)
-                if not state["raid_settings"][el][diff] or completed >= max_runs:
+        while state.get("running"):
+            raid_found = False
+
+            for diff, enabled in state["raid_settings"].get(el, {}).items():
+                if not enabled:
                     continue
 
-                # Ragnarok/Ultimate precision check
-                conf = 0.92 if diff in ["ragnarok", "ultimate"] else 0.75
+                if state["completed_raids"][el].get(diff, 0) >= 1:
+                    continue
 
                 raid_img = get_img(f"KHR_{el}_{diff}")
-                btn = pyautogui.locateOnScreen(raid_img, confidence=conf)
-                if btn:
-                    found_any = True
-                    log_msg(f"Entering {el} {diff}", log_widget)
-                    pyautogui.click(pyautogui.center(btn))
-                    time.sleep(2)
-                    # After clicking entry, check for several possible outcomes:
-                    # - max limit reached (IMAGES['limit'])
-                    # - doesn't meet condition (IMAGES['condition'])
-                    # - stamina check (IMAGES['stamina_check'])
-                    # - OK popup (entry blocked)
+                loc = pyautogui.locateOnScreen(raid_img, confidence=0.92)
+                if not loc:
+                    continue
 
-                    entry_handled = False
-                    # short loop to allow transient dialogs to appear
-                    for _ in range(8):
-                        if not state.get("running", False):
-                            entry_handled = True
-                            break
+                raid_found = True
+                pyautogui.click(pyautogui.center(loc))
+                time.sleep(2)
 
-                        # MAX LIMIT
-                        if IMAGES.get("limit") and pyautogui.locateOnScreen(IMAGES["limit"], confidence=CONFIDENCE):
-                            log_msg("Entry blocked: max limit reached.", log_widget)
-                            # dismiss with OK if available
-                            if IMAGES.get("ok"):
-                                find_and_click(IMAGES["ok"], timeout=0.6, max_attempts=2, log_widget=log_widget)
-                            # mark as consumed so we don't try again
-                            state["completed_raids"][el][diff] = state["completed_raids"][el].get(diff, 0) + state.get("max_runs", {}).get(el, 1)
-                            entry_handled = True
-                            break
+                result = try_enter_raid(el, diff, IMAGES, log_widget)
 
-                        # CONDITION NOT MET (these dialogs usually have an OK or CHALLENGE button)
-                        if IMAGES.get("condition") and pyautogui.locateOnScreen(IMAGES["condition"], confidence=CONFIDENCE):
-                            log_msg("Entry blocked: condition not met.", log_widget)
-                            # prefer to press OK or CHALLENGE if available
-                            if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
-                                find_and_click(IMAGES["ok"], timeout=0.6, max_attempts=2, log_widget=log_widget)
-                            elif IMAGES.get("challenge") and pyautogui.locateOnScreen(IMAGES["challenge"], confidence=CONFIDENCE):
-                                find_and_click(IMAGES["challenge"], timeout=0.6, max_attempts=2, log_widget=log_widget)
-                            else:
-                                # fallback to cancel if nothing else
-                                if IMAGES.get("cancel"):
-                                    find_and_click(IMAGES["cancel"], timeout=0.6, max_attempts=2, log_widget=log_widget)
-                            state["completed_raids"][el][diff] = state["completed_raids"][el].get(diff, 0) + 1
-                            entry_handled = True
-                            break
+                if result in ("limit", "condition"):
+                    state["completed_raids"][el][diff] += 1
+                    continue
 
-                        # STAMINA CHECK: try to handle (use stamina) and then re-evaluate
-                        if check_stamina(IMAGES, log_widget):
-                            log_msg("Stamina dialog handled for raid entry; re-evaluating...", log_widget)
-                            time.sleep(0.6)
-                            continue
+                if result == "start":
+                    run_combat(el, diff, IMAGES, log_widget)
 
-                        # Check for OK popup (generic blocked popup)
-                        ok_btn = IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.8)
-                        if ok_btn:
-                            log_msg("Entry blocked by popup.", log_widget)
-                            find_and_click(IMAGES["ok"], timeout=0.6, max_attempts=2, log_widget=log_widget)
-                            # count this as an attempted/consumed hosting
-                            state["completed_raids"][el][diff] = state["completed_raids"][el].get(diff, 0) + 1
-                            entry_handled = True
-                            break
-
-                        # nothing yet, wait a bit
-                        time.sleep(0.4)
-
-                    if entry_handled:
-                        # go back to scanning diffs for this element
-                        break
-
-                    # else: no blocking dialog detected -> treat as successful entry
-                    else:
-                        # SUCCESSFUL ENTRY -> Do combat until we can return
-                        log_msg("In Battle...", log_widget)
-                        in_battle = True
-                        while in_battle and state.get("running", False):
-                            # Use the combat sequence (raid may present support_request etc.)
-                            combat_sequence(log_widget, IMAGES, get_img)
-                            # Check if we can return to list
-                            ret_btn = IMAGES.get("return") and pyautogui.locateOnScreen(IMAGES["return"], confidence=0.8)
-                            if ret_btn:
-                                find_and_click(IMAGES["return"], max_attempts=3, log_widget=log_widget)
-                                in_battle = False
-                                state["completed_raids"][el][diff] = state["completed_raids"].get(el, {}).get(diff, 0) + 1
-                                # increment raid loop counter for a completed raid run
-                                _inc_loop("raid", log_widget)
-                            time.sleep(1.5)
+            # Page down if nothing found
+            if not raid_found:
+                if not try_page_down(IMAGES):
                     break
-
-            if not found_any:
-                down_loc = IMAGES.get("down") and pyautogui.locateOnScreen(IMAGES["down"], confidence=0.7)
-                if down_loc and not (IMAGES.get("down_max") and pyautogui.locateOnScreen(IMAGES["down_max"], region=down_loc, confidence=0.9)):
-                    pyautogui.click(down_loc)
-                    time.sleep(1.2)
-                else:
-                    element_finished = True
 
     state["running"] = False
     log_msg("ROTATION FINISHED", log_widget)
