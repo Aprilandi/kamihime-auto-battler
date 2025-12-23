@@ -24,9 +24,11 @@ logic.state["active_sequence"] = None
 def _set_mode_buttons_state(state_value):
     # helper to enable/disable the main mode buttons
     try:
-        raid_btn.configure(state=state_value)
-        epic_btn.configure(state=state_value)
-        retry_btn.configure(state=state_value)
+        btn_raid.configure(state=state_value)
+        btn_epic.configure(state=state_value)
+        btn_retry.configure(state=state_value)
+        # btn_raid_farm.configure(state=state_value)
+        # btn_tower.configure(state=state_value)
     except Exception:
         pass
 
@@ -92,13 +94,16 @@ ctk.CTkButton(ctrl_frame, text="RESET", fg_color="orange", width=120, command=re
 mode_frame = ctk.CTkFrame(app)
 mode_frame.pack(fill="x", padx=10, pady=5)
 # create buttons and keep references so we can disable/enable them while a sequence runs
-raid_btn = ctk.CTkButton(mode_frame, text="Raid Host", width=120, command=lambda: start_mode(logic.raid_host_rotation, "raid", log, ELEMENTS, IMAGES, get_img))
-raid_btn.grid(row=0, column=0, padx=2, pady=2)
-epic_btn = ctk.CTkButton(mode_frame, text="Epic Quest Rush", width=120, command=lambda: start_mode(logic.epic_quest_rush, "epic", log, IMAGES))
-epic_btn.grid(row=0, column=1, padx=2, pady=2)
-retry_btn = ctk.CTkButton(mode_frame, text="Retry Farm", width=120, command=lambda: start_mode(logic.farm_loop, "farm", log, IMAGES))
-retry_btn.grid(row=1, column=0, padx=2, pady=2)
-ctk.CTkButton(mode_frame, text="Farm Raid", width=120, state="disabled").grid(row=1, column=1, padx=2, pady=2)
+btn_raid = ctk.CTkButton(mode_frame, text="Raid Host", width=120, command=lambda: start_mode(logic.raid_host, "raid", log, ELEMENTS, IMAGES, get_img))
+btn_raid.grid(row=0, column=0, padx=2, pady=2)
+btn_epic = ctk.CTkButton(mode_frame, text="Epic Quest Rush", width=120, command=lambda: start_mode(logic.quest_rush, "epic", log, IMAGES))
+btn_epic.grid(row=0, column=1, padx=2, pady=2)
+btn_retry = ctk.CTkButton(mode_frame, text="Retry Farm", width=120, command=lambda: start_mode(logic.farm_loop, "farm", log, IMAGES))
+btn_retry.grid(row=1, column=0, padx=2, pady=2)
+btn_raid_farm = ctk.CTkButton(mode_frame, text="Farm Raid", width=120, state="disabled")
+btn_raid_farm.grid(row=1, column=1, padx=2, pady=2)
+btn_tower = ctk.CTkButton(mode_frame, text="Tower Farm", width=120, state="disabled")
+btn_tower.grid(row=2, column=0, padx=2, pady=2)
 
 # Loop counters display
 counter_frame = ctk.CTkFrame(app)
@@ -126,7 +131,7 @@ rescue_var = ctk.BooleanVar(value=logic.state.get("rescue", True))
 def _toggle_rescue():
     logic.state["rescue"] = rescue_var.get()
 
-ctk.CTkCheckBox(mode_frame, text="RESCUE", variable=rescue_var, command=_toggle_rescue).grid(row=2, column=0, columnspan=2, pady=6)
+ctk.CTkCheckBox(mode_frame, text="RESCUE", variable=rescue_var, command=_toggle_rescue).grid(row=3, column=0, columnspan=2, pady=6)
 
 # Raid Config
 scroll = ctk.CTkScrollableFrame(app, height=300, label_text="Raid Config")
