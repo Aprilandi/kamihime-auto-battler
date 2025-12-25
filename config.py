@@ -4,16 +4,17 @@ import pyautogui
 pyautogui.useImageNotFoundException(False)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+def get_img(name): 
+    # This joins BASE_DIR + 'images' + 'filename.png'
+    return os.path.join(BASE_DIR, "images", f"{name}.png")
+
 CONFIDENCE = 0.8
 SLEEP = 0.5
 
 # config.py
 ELEMENTS = ["fire", "water", "wind", "thunder", "light", "dark", "phantom"]
 DIFFICULTIES = ["guardian_plus", "guardian", "ragnarok", "ultimate", "expert", "standard"]
-
-def get_img(name): 
-    # This joins BASE_DIR + 'images' + 'filename.png'
-    return os.path.join(BASE_DIR, "images", f"{name}.png")
+CONNECTING = get_img('KHR_connecting')
 
 IMAGES = {
     "story_start": get_img('KHR_gems(start)'),
@@ -37,6 +38,8 @@ IMAGES = {
     "stamina_check": get_img('KHR_stamina_check'),
     "stamina_use": get_img('KHR_stamina_use'),
     "ongoing": get_img('KHR_give_up_resume'),
+    "quest": get_img('KHR_quest'),
+    "raid_quest": get_img('KHR_raid_quests'),
     "quest_list": get_img('KHR_quest_list'),
     "batch": get_img('KHR_batch_check'),
     "down": get_img('KHR_down'),

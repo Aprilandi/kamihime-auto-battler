@@ -1,4 +1,15 @@
 import time
+import pyautogui
+import os
+from config import CONFIDENCE, IMAGES, SLEEP, CONNECTING
+from PIL import Image
+import pytesseract
+
+# Path relative to your project
+pytesseract.pytesseract.tesseract_cmd = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "tesseract", "tesseract.exe")
+)
+
 
 # Shared state and common constants
 state = {"running": False, "raid_settings": {}, "completed_raids": {}}
@@ -28,3 +39,134 @@ def _inc_loop(name, log_widget=None):
     val = state["loop_counts"][name]
     log_msg(f"Loop counter [{name}] = {val}", log_widget)
     return val
+
+
+def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None):
+    """Find an image on screen and click it.
+    """
+    if not image:
+        return False
+
+    # friendly name for logs
+    try:
+        name = os.path.basename(image)
+    except Exception:
+        name = str(image)
+        
+    log_msg(f"Searching for {name}", log_widget)
+    
+    start_time = time.time()
+    
+    while state.get("running", False): 
+        btn = pyautogui.locateOnScreen(image, confidence=confidence)
+
+        if btn:
+            log_msg(f"Found {name}, clicking", log_widget) 
+            log_msg("Waiting for connecting to disappear", log_widget)
+            while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+                time.sleep(SLEEP)
+            try:
+                time.sleep(SLEEP)
+                pyautogui.click(pyautogui.center(btn))
+            except Exception:
+                # fallback: click top-left of the located box
+                time.sleep(SLEEP)
+                pyautogui.click(btn.left + 5, btn.top + 5)
+            log_msg(f"Clicked {name}", log_widget)
+            return True 
+        
+        if optional: 
+            elapsed = time.time() - start_time 
+            if elapsed >= timeout: 
+                return False 
+            
+        # Prevent CPU hogging 
+        time.sleep(0.1)
+
+        
+def post_battle(IMAGES, timeout=2.0, confidence=CONFIDENCE, log_widget=None):
+    ok = IMAGES.get("ok")
+    time.sleep(1.0)
+    start_time = time.time()
+
+    while state.get("running", False):
+        if (time.time() - start_time) >= timeout:
+            return True
+        else:
+            if find_and_click(ok, confidence=confidence, optional=True, timeout=0.5, log_widget=log_widget):
+                start_time = start_time + 0.5
+            
+        time.sleep(SLEEP)
+        
+    return False
+
+def next_page(IMAGES, log_widget=None):
+    """Go to the next page in menus.
+    """
+    log_msg("Navigating to next page", log_widget)
+    if IMAGES.get('down_max') and pyautogui.locateOnScreen(IMAGES['down_max'], confidence=1):
+        log_msg("Reached end of page.")
+        return False
+    else:
+        log_msg("Searching the down button...")
+        if find_and_click(IMAGES.get('down'), log_widget=log_widget):
+            time.sleep(1.0)
+            return True
+
+
+def find_text(texts, log_widget=None):
+    screenshot = pyautogui.screenshot() 
+    
+    textImage = pytesseract.image_to_string(screenshot)
+    
+    for t in texts:
+        if t in textImage:
+            return True
+    return False
+
+
+def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None):
+    screenshot = pyautogui.screenshot()
+    data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
+    start_time = time.time()
+
+    while state.get("running", False):
+        for i, word in enumerate(data["text"]):
+            log_msg(f"Searching text {texts}...", log_widget)
+            if word in texts:
+                x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+                center_x, center_y = x + w // 2, y + h // 2
+
+                log_msg(f"Found text '{word}', clicking", log_widget)
+                pyautogui.click(center_x, center_y)
+                return True
+
+        if optional: 
+            elapsed = time.time() - start_time 
+            if elapsed >= timeout: 
+                return False 
+
+        time.sleep(SLEEP)
+        
+def test_function(texts, timeout=1.0, optional=False, log_widget=None):
+    screenshot = pyautogui.screenshot()
+    data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
+    start_time = time.time()
+    log_msg(f"Searching text {texts}...", log_widget)
+
+    while state.get("running", False):
+        for i, word in enumerate(data["text"]):
+            if word in texts:
+                x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+                center_x, center_y = x + w // 2, y + h // 2
+
+                log_msg(f"Found text '{word}', clicking", log_widget)
+                pyautogui.click(center_x, center_y)
+                return True
+
+        if optional: 
+            elapsed = time.time() - start_time 
+            if elapsed >= timeout: 
+                return False 
+
+        time.sleep(SLEEP)

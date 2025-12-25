@@ -3,6 +3,7 @@ __pycache__/
 **/__pycache__/
 *.py[cod]
 *$py.class
+tesseract/
 
 # Virtualenvs
 .venv/
@@ -58,6 +59,5 @@ local_settings.py
 # If you want to avoid committing large images, remove the images/ line below
 # but note the program depends on them.
 # images/
-
 
 sequences.txt

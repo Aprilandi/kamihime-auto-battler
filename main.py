@@ -16,7 +16,7 @@ logic.state["max_runs"] = {el: (2 if el == "phantom" else 1) for el in ELEMENTS}
 # RESCUE behavior (True = wait for rescue OK to be active; False = cancel on death)
 logic.state["rescue"] = True
 # loop counters: track how many iterations each sequence has performed
-logic.state["loop_counts"] = {"farm": 0, "epic": 0, "raid": 0}
+logic.state["loop_counts"] = {"farm_loop": 0, "quest_rush": 0, "raid_host": 0}
 # active sequence name (or None)
 logic.state["active_sequence"] = None
 
@@ -94,16 +94,18 @@ ctk.CTkButton(ctrl_frame, text="RESET", fg_color="orange", width=120, command=re
 mode_frame = ctk.CTkFrame(app)
 mode_frame.pack(fill="x", padx=10, pady=5)
 # create buttons and keep references so we can disable/enable them while a sequence runs
-btn_raid = ctk.CTkButton(mode_frame, text="Raid Host", width=120, command=lambda: start_mode(logic.raid_host, "raid", log, ELEMENTS, IMAGES, get_img))
+btn_raid = ctk.CTkButton(mode_frame, text="Raid Host", width=120, command=lambda: start_mode(logic.raid_host, "raid_host", IMAGES, ELEMENTS, get_img, log))
 btn_raid.grid(row=0, column=0, padx=2, pady=2)
-btn_epic = ctk.CTkButton(mode_frame, text="Epic Quest Rush", width=120, command=lambda: start_mode(logic.quest_rush, "epic", log, IMAGES))
+btn_epic = ctk.CTkButton(mode_frame, text="Epic Quest Rush", width=120, command=lambda: start_mode(logic.quest_rush, "quest_rush", IMAGES, log))
 btn_epic.grid(row=0, column=1, padx=2, pady=2)
-btn_retry = ctk.CTkButton(mode_frame, text="Retry Farm", width=120, command=lambda: start_mode(logic.farm_loop, "farm", log, IMAGES))
+btn_retry = ctk.CTkButton(mode_frame, text="Retry Farm", width=120, command=lambda: start_mode(logic.farm_loop, "farm_loop", IMAGES, log))
 btn_retry.grid(row=1, column=0, padx=2, pady=2)
 btn_raid_farm = ctk.CTkButton(mode_frame, text="Farm Raid", width=120, state="disabled")
 btn_raid_farm.grid(row=1, column=1, padx=2, pady=2)
 btn_tower = ctk.CTkButton(mode_frame, text="Tower Farm", width=120, state="disabled")
 btn_tower.grid(row=2, column=0, padx=2, pady=2)
+btn_test = ctk.CTkButton(mode_frame, text="Test", width=120, command=lambda: start_mode(logic.test_function, ['Return to Raid quests'], "1", False, log))
+btn_test.grid(row=2, column=1, padx=2, pady=2)
 
 # Loop counters display
 counter_frame = ctk.CTkFrame(app)
