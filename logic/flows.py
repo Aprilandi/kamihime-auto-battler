@@ -61,13 +61,20 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
         if not state.get("running", False):
             return
         
+        element_cfg = state["raid_settings"].get(element, {})
+        # skip whole element if disabled
+        if not element_cfg.get("enable", True):
+            log_msg(f"Element {element_cfg} is not enabled. Skipping")
+            continue
+
         log_msg(f"Selecting element: {element}", log_widget)
-        
+
         if index > 0:
             find_and_click(get_img(f"KHR_raid_{element}"), log_widget=log_widget, confidence=0.98)
-        
-        for difficulty, enabled in state["raid_settings"].get(element, {}).items():
+
+        for difficulty, enabled in element_cfg.get("difficulty", {}).items():
             if not enabled:
+                log_msg(f"Element {element_cfg} Difficulty {difficulty} is not enabled. Skipping")
                 continue
             
             if state['completed_raids'].get(element, {}).get(difficulty, 0) > 0:
@@ -79,7 +86,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                 log_msg("Handling raid entry", log_widget)
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
 
-                if find_and_click(raid_image, confidence=0.95, log_widget=log_widget, optional=True):
+                if find_and_click(raid_image, confidence=0.85, log_widget=log_widget, optional=True):
                     if ongoing_battle(IMAGES, log_widget=log_widget):
                         continue
                     

@@ -61,3 +61,4 @@ local_settings.py
 # images/
 
 sequences.txt
+raid_prefs.json

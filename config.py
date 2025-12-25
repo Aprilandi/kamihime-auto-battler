@@ -1,5 +1,8 @@
 import os
 import pyautogui
+import json
+
+PREFS_FILENAME = "raid_prefs.json"
 
 pyautogui.useImageNotFoundException(False)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -46,3 +49,41 @@ IMAGES = {
     "down_max": get_img('KHR_down_max'),
     "limit": get_img('KHR_limit')
 }
+
+
+PREFS_PATH = os.path.join(BASE_DIR, PREFS_FILENAME)
+
+
+def load_prefs():
+    """Load persisted raid preferences (raid_settings, completed_raids, max_runs, rescue).
+
+    Returns a dict with saved keys or an empty dict when none exists.
+    """
+    if not os.path.exists(PREFS_PATH):
+        return {}
+    try:
+        with open(PREFS_PATH, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_prefs(state_dict):
+    """Persist selected parts of runtime state to PREFS_PATH.
+
+    We only persist raid_settings, completed_raids, max_runs, and rescue so the file
+    remains small and focused on user preferences/progress.
+    """
+    try:
+        data = {
+            'raid_settings': state_dict.get('raid_settings', {}),
+            'completed_raids': state_dict.get('completed_raids', {}),
+            'max_runs': state_dict.get('max_runs', {}),
+            'rescue': state_dict.get('rescue', True),
+        }
+        with open(PREFS_PATH, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception:
+        return False

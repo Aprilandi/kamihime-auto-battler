@@ -7,18 +7,47 @@ DIFFICULTIES = config.DIFFICULTIES
 IMAGES = config.IMAGES
 get_img = config.get_img
 
-# Initialize State
-logic.state["raid_settings"] = {el: {d: True for d in DIFFICULTIES} for el in ELEMENTS}
-# completed_raids: counters per element/difficulty (0..N). Phantom allowed twice by default.
-logic.state["completed_raids"] = {el: {d: 0 for d in DIFFICULTIES} for el in ELEMENTS}
-# max_runs per element (phantom=2, others=1)
-logic.state["max_runs"] = {el: (2 if el == "phantom" else 1) for el in ELEMENTS}
-# RESCUE behavior (True = wait for rescue OK to be active; False = cancel on death)
+# Initialize State with defaults; override from persisted prefs when available
+default_raid_settings = {
+    el: {"enable": True, "difficulty": {d: True for d in DIFFICULTIES}}
+    for el in ELEMENTS
+}
+default_completed = {el: {d: 0 for d in DIFFICULTIES} for el in ELEMENTS}
+default_max_runs = {el: (2 if el == "phantom" else 1) for el in ELEMENTS}
+
+logic.state["raid_settings"] = default_raid_settings
+logic.state["completed_raids"] = default_completed
+logic.state["max_runs"] = default_max_runs
 logic.state["rescue"] = True
 # loop counters: track how many iterations each sequence has performed
 logic.state["loop_counts"] = {"farm_loop": 0, "quest_rush": 0, "raid_host": 0}
 # active sequence name (or None)
 logic.state["active_sequence"] = None
+
+# Load persisted preferences (if any) and merge them into runtime state
+try:
+    prefs = config.load_prefs()
+    if prefs.get("raid_settings"):
+        # merge nested format: {el: {"enable": bool, "difficulty": { ... }}}
+        for el, data in prefs.get("raid_settings", {}).items():
+            if el in logic.state["raid_settings"] and isinstance(data, dict):
+                # merge enable flag
+                if "enable" in data:
+                    logic.state["raid_settings"][el]["enable"] = bool(data.get("enable"))
+                # merge difficulty map
+                if isinstance(data.get("difficulty"), dict):
+                    logic.state["raid_settings"][el]["difficulty"].update(data.get("difficulty"))
+    if prefs.get("completed_raids"):
+        for el, diffs in prefs.get("completed_raids", {}).items():
+            if el in logic.state["completed_raids"]:
+                logic.state["completed_raids"][el].update(diffs)
+    if prefs.get("max_runs"):
+        logic.state["max_runs"].update(prefs.get("max_runs", {}))
+    if "rescue" in prefs:
+        logic.state["rescue"] = bool(prefs.get("rescue"))
+except Exception:
+    # ignore prefs errors and continue with defaults
+    pass
 
 # --- Controller Functions ---
 def _set_mode_buttons_state(state_value):
@@ -72,6 +101,11 @@ def reset_list():
             logic.state["loop_counts"][k] = 0
     log.insert("end", ">>> PROGRESS RESET <<<\n")
     log.see("end")
+    # persist reset
+    try:
+        config.save_prefs(logic.state)
+    except Exception:
+        pass
 
 keyboard.add_hotkey('f7', stop_bot)
 
@@ -139,16 +173,73 @@ ctk.CTkCheckBox(mode_frame, text="RESCUE", variable=rescue_var, command=_toggle_
 scroll = ctk.CTkScrollableFrame(app, height=300, label_text="Raid Config")
 scroll.pack(fill="both", expand=True, padx=10, pady=5)
 
+# store child vars so we can sync parent <> children
+element_child_vars = {}
+
 for el in ELEMENTS:
-    ctk.CTkLabel(scroll, text=el.upper(), font=("Arial", 10, "bold")).pack()
+    # Parent checkbox for the whole element (persisted under raid_settings[el]['__element_enabled__'])
+    parent_init = logic.state.get("raid_settings", {}).get(el, {}).get("enable", True)
+    parent_var = ctk.BooleanVar(value=parent_init)
+
+    def make_parent_cb(e=el, pv=parent_var):
+        def _on_parent():
+            val = pv.get()
+            # set all child vars and update runtime state
+            for cv, diff in element_child_vars.get(e, []):
+                cv.set(val)
+                logic.state["raid_settings"][e]["difficulty"][diff] = val
+            # persist enable flag
+            logic.state["raid_settings"][e]["enable"] = val
+            try:
+                config.save_prefs(logic.state)
+            except Exception:
+                pass
+        return _on_parent
+
+    parent_cb = ctk.CTkCheckBox(scroll, text=el.upper(), font=("Arial", 10, "bold"), variable=parent_var, command=make_parent_cb())
+    parent_cb.pack(anchor="w", padx=6, pady=(6,2))
+
+    # prepare list for this element
+    element_child_vars[el] = []
+
     for d in DIFFICULTIES:
-        var = ctk.BooleanVar(value=True)
-        cb = ctk.CTkCheckBox(scroll, text=d, font=("Arial", 9), height=16, variable=var,
-                             command=lambda e=el, di=d, v=var: logic.state["raid_settings"][e].update({di: v.get()}))
-        cb.select()
-        cb.pack(anchor="w", padx=10)
+        # initialize checkbox state from persisted runtime state
+        init_val = logic.state.get("raid_settings", {}).get(el, {}).get("difficulty", {}).get(d, True)
+        var = ctk.BooleanVar(value=init_val)
+
+        def make_cb_command(e=el, di=d, v=var, pv=parent_var):
+            def _cb():
+                logic.state["raid_settings"][e]["difficulty"][di] = v.get()
+                # update parent: checked if any child checked
+                any_checked = any(cv.get() for cv, _ in element_child_vars.get(e, []))
+                pv.set(any_checked)
+                logic.state["raid_settings"][e]["enable"] = any_checked
+                # persist change immediately
+                try:
+                    config.save_prefs(logic.state)
+                except Exception:
+                    pass
+            return _cb
+
+        cb = ctk.CTkCheckBox(scroll, text=d, font=("Arial", 9), height=16, variable=var, command=make_cb_command())
+        if init_val:
+            cb.select()
+        cb.pack(anchor="w", padx=20)
+        element_child_vars[el].append((var, d))
 
 log = ctk.CTkTextbox(app, height=100, font=("Arial", 10))
 log.pack(fill="x", padx=10, pady=5)
+
+# Start an autosave thread to persist completed_raids and raid_settings periodically.
+def _autosave_loop(interval=5.0):
+    while True:
+        try:
+            config.save_prefs(logic.state)
+        except Exception:
+            pass
+        time.sleep(interval)
+
+import time
+threading.Thread(target=_autosave_loop, daemon=True).start()
 
 app.mainloop()
