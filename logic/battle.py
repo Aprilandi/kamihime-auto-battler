@@ -41,15 +41,6 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False):
 def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=False):
     log_msg("Waiting for battle to end...", log_widget)
     
-    if rescue_active:
-        log_msg("Waiting for rescue active.", log_widget)
-        while state.get("running", False):
-            if IMAGES.get("rescue_prompt") and pyautogui.locateOnScreen(IMAGES['rescue_prompt'], confidence=CONFIDENCE):
-                if find_and_click(IMAGES['ok'], optional=True):
-                    break
-            else:
-                break
-
     while state.get("running", False):
         if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             log_msg("Defeated detected cancelling the revive...", log_widget)
@@ -77,9 +68,12 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
             log_msg("Battle ended - Return Raid button found", log_widget)
             break
 
-        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) and not find_text(['left to requet', 'sec'], log_widget=log_widget):
-            log_msg("Battle ended - OK button found", log_widget)
-            break
+        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) and not find_text(['sec'], log_widget=log_widget):
+            if find_text(['Subjugation?'], log_widget=log_widget):
+                find_and_click(IMAGES['ok'], log_widget=log_widget)
+            else:
+                log_msg("Battle ended - OK button found", log_widget)
+                break
 
         time.sleep(SLEEP)
 

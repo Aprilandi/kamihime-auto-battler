@@ -78,7 +78,8 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                 continue
             
             completed_raid = state['completed_raids'].get(element, {}).get(difficulty, 0)
-            if completed_raid > 0 and completed_raid < state['max_runs'].get(element, 1):
+
+            if completed_raid > 0 and completed_raid == state['max_runs'].get(element, 1):
                 log_msg(f"Skipping already completed raid: {element} - {difficulty}", log_widget)
                 continue
 

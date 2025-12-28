@@ -38,9 +38,18 @@ try:
                 if isinstance(data.get("difficulty"), dict):
                     logic.state["raid_settings"][el]["difficulty"].update(data.get("difficulty"))
     if prefs.get("completed_raids"):
-        for el, diffs in prefs.get("completed_raids", {}).items():
-            if el in logic.state["completed_raids"]:
-                logic.state["completed_raids"][el].update(diffs)
+        # Defensive merge: ensure every element/difficulty key is present and
+        # prefer persisted values when available. Cast values to int to avoid
+        # accidental string types from external edits.
+        persisted = prefs.get("completed_raids", {}) or {}
+        for el in ELEMENTS:
+            for d in DIFFICULTIES:
+                try:
+                    val = persisted.get(el, {}).get(d, default_completed[el][d])
+                    logic.state["completed_raids"][el][d] = int(val)
+                except Exception:
+                    # if casting fails, fallback to the default
+                    logic.state["completed_raids"][el][d] = default_completed[el][d]
     if prefs.get("max_runs"):
         logic.state["max_runs"].update(prefs.get("max_runs", {}))
     if "rescue" in prefs:
@@ -70,6 +79,11 @@ def start_mode(mode_func, mode_name, *args):
         status_lbl.configure(text="RUNNING", text_color="green")
         # disable other buttons
         _set_mode_buttons_state("disabled")
+        # try to prevent the system from sleeping while the bot runs
+        try:
+            logic.prevent_sleep()
+        except Exception:
+            pass
 
         t = threading.Thread(target=mode_func, args=args, daemon=True)
         t.start()
@@ -79,6 +93,11 @@ def start_mode(mode_func, mode_name, *args):
             t.join()
             logic.state["running"] = False
             logic.state["active_sequence"] = None
+            # allow normal sleep behavior again
+            try:
+                logic.allow_sleep()
+            except Exception:
+                pass
             _set_mode_buttons_state("normal")
             try:
                 status_lbl.configure(text="STOPPED", text_color="red")
@@ -90,6 +109,11 @@ def start_mode(mode_func, mode_name, *args):
 def stop_bot():
     logic.state["running"] = False
     status_lbl.configure(text="STOPPED", text_color="red")
+    # restore normal sleep behavior when the user stops the bot
+    try:
+        logic.allow_sleep()
+    except Exception:
+        pass
 
 def reset_list():
     for el in ELEMENTS:

@@ -41,6 +41,42 @@ def _inc_loop(name, log_widget=None):
     return val
 
 
+# --- Power Management Helpers (Windows) -----------------
+try:
+    import ctypes
+    _ES_CONTINUOUS = 0x80000000
+    _ES_SYSTEM_REQUIRED = 0x00000001
+    _ES_DISPLAY_REQUIRED = 0x00000002
+
+    def prevent_sleep():
+        """Prevent the system from sleeping and the display from turning off.
+
+        Uses SetThreadExecutionState on Windows. Safe to call multiple times.
+        """
+        try:
+            ctypes.windll.kernel32.SetThreadExecutionState(
+                _ES_CONTINUOUS | _ES_SYSTEM_REQUIRED | _ES_DISPLAY_REQUIRED
+            )
+            return True
+        except Exception:
+            return False
+
+    def allow_sleep():
+        """Restore normal sleep behavior."""
+        try:
+            ctypes.windll.kernel32.SetThreadExecutionState(_ES_CONTINUOUS)
+            return True
+        except Exception:
+            return False
+except Exception:
+    # Non-Windows or ctypes not available: provide no-op fallbacks
+    def prevent_sleep():
+        return False
+
+    def allow_sleep():
+        return False
+
+
 def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None):
     """Find an image on screen and click it.
     """
