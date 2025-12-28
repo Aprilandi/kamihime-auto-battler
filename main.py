@@ -138,7 +138,7 @@ btn_raid_farm = ctk.CTkButton(mode_frame, text="Farm Raid", width=120, state="di
 btn_raid_farm.grid(row=1, column=1, padx=2, pady=2)
 btn_tower = ctk.CTkButton(mode_frame, text="Tower Farm", width=120, state="disabled")
 btn_tower.grid(row=2, column=0, padx=2, pady=2)
-btn_test = ctk.CTkButton(mode_frame, text="Test", width=120, command=lambda: start_mode(logic.test_function, ['Return to Raid quests'], "1", False, log))
+btn_test = ctk.CTkButton(mode_frame, text="Test", width=120, command=lambda: start_mode(logic.combat_sequence, IMAGES, log, True))
 btn_test.grid(row=2, column=1, padx=2, pady=2)
 
 # Loop counters display

@@ -28,6 +28,7 @@ IMAGES = {
     "go_quest": get_img('KHR_gotoquest'),
     "attack": get_img('KHR_attack'),
     "rescue": get_img('KHR_rescue'),
+    "rescue_prompt": get_img('KHR_rescue_prompt'),
     "condition": get_img('KHR_condition'),
     "challenge": get_img('KHR_challenge'),
     "cancel": get_img('KHR_cancel'),

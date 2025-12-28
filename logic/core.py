@@ -130,9 +130,9 @@ def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None):
     data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
     start_time = time.time()
 
+    log_msg(f"Searching text {texts}...", log_widget)
     while state.get("running", False):
         for i, word in enumerate(data["text"]):
-            log_msg(f"Searching text {texts}...", log_widget)
             if word in texts:
                 x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
                 center_x, center_y = x + w // 2, y + h // 2

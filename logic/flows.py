@@ -77,7 +77,8 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                 log_msg(f"Element {element_cfg} Difficulty {difficulty} is not enabled. Skipping")
                 continue
             
-            if state['completed_raids'].get(element, {}).get(difficulty, 0) > 0:
+            completed_raid = state['completed_raids'].get(element, {}).get(difficulty, 0)
+            if completed_raid > 0 and completed_raid < state['max_runs'].get(element, 1):
                 log_msg(f"Skipping already completed raid: {element} - {difficulty}", log_widget)
                 continue
 
@@ -120,7 +121,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                         # find_and_click_text(['Return'], log_widget=log_widget)
                         find_and_click(IMAGES['return_raid'])
                         state["completed_raids"][element][difficulty] += 1
-                        break
+                        continue
 
                     elif IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
                         log_msg("Entry is possible (ok)", log_widget)
@@ -134,7 +135,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                         # find_and_click_text(['Return'], log_widget=log_widget)
                         find_and_click(IMAGES['return_raid'])
                         state["completed_raids"][element][difficulty] += 1
-                        break
+                        continue
 
                 else:
                     if next_page(IMAGES, log_widget=log_widget):

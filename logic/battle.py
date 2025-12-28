@@ -1,6 +1,6 @@
 import time
 import pyautogui
-from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_text
+from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_text, find_and_click_text
 from config import SLEEP, CONFIDENCE
 
 def combat_sequence(IMAGES, log_widget=None, host_raid=False):
@@ -40,7 +40,31 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False):
 
 def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=False):
     log_msg("Waiting for battle to end...", log_widget)
+    
+    if rescue_active:
+        log_msg("Waiting for rescue active.", log_widget)
+        while state.get("running", False):
+            if IMAGES.get("rescue_prompt") and pyautogui.locateOnScreen(IMAGES['rescue_prompt'], confidence=CONFIDENCE):
+                if find_and_click(IMAGES['ok'], optional=True):
+                    break
+            else:
+                break
+
     while state.get("running", False):
+        if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
+            log_msg("Defeated detected cancelling the revive...", log_widget)
+            # if find_and_click(IMAGES["cancel"], log_widget=log_widget):
+            if find_and_click_text(['Cancel'], log_widget=log_widget):
+                if rescue_active or host_raid:
+                    log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
+                    # find_and_click(IMAGES['cancel'], log_widget=log_widget)
+                    find_and_click_text(['Cancel'], log_widget=log_widget)
+                    break
+                else:
+                    log_msg("Rescue is disabled or doesn't exist - returning to quest list", log_widget)
+                    find_and_click(IMAGES['quest_list'], log_widget=log_widget)
+            break
+        
         if IMAGES.get("return") and pyautogui.locateOnScreen(IMAGES["return"], confidence=CONFIDENCE):
             log_msg("Battle ended - Return button found", log_widget)
             break
@@ -49,28 +73,12 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
             log_msg("Battle ended - Retry button found", log_widget)
             break
         
-        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) and not find_text(['left to requet', 'sec'], log_widget=log_widget):
-            log_msg("Battle ended or rescue is available - OK button found", log_widget)
-            if rescue_active:
-                find_and_click(IMAGES['ok'])
-                find_and_click(IMAGES['ok'])
-            
-            break
-        
         if IMAGES.get("return_raid") and pyautogui.locateOnScreen(IMAGES["return_raid"], confidence=CONFIDENCE):
             log_msg("Battle ended - Return Raid button found", log_widget)
             break
-        
-        if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
-            log_msg("Defeated detected cancelling the revive...", log_widget)
-            if find_and_click(IMAGES["cancel"], log_widget=log_widget):
-                if rescue_active or host_raid:
-                    log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
-                    find_and_click(IMAGES['cancel'], log_widget=log_widget)
-                    break
-                else:
-                    log_msg("Rescue is disabled or doesn't exist - returning to quest list", log_widget)
-                    find_and_click(IMAGES['quest_list'], log_widget=log_widget)
+
+        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) and not find_text(['left to requet', 'sec'], log_widget=log_widget):
+            log_msg("Battle ended - OK button found", log_widget)
             break
 
         time.sleep(SLEEP)
