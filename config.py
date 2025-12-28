@@ -48,7 +48,14 @@ IMAGES = {
     "batch": get_img('KHR_batch_check'),
     "down": get_img('KHR_down'),
     "down_max": get_img('KHR_down_max'),
-    "limit": get_img('KHR_limit')
+    "limit": get_img('KHR_limit'),
+    
+    "ep_start": get_img('KHR_episode_notif'),
+    "ep_encounter": get_img('KHR_episode_encounter'),
+    "ep_1": get_img('KHR_episode_1'),
+    "ep_2": get_img('KHR_episode_2'),
+    "ep_skip": get_img('KHR_episode_skip'),
+    "ep_return": get_img('KHR_episode_return')
 }
 
 
