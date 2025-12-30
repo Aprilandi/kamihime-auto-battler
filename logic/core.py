@@ -119,8 +119,41 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
         # Prevent CPU hogging 
         time.sleep(0.1)
 
+
+def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None):
+    log_msg("Searching for available raids...", log_widget)
+    
+    # 1. Find all instances of the raid banner
+    # grayscale=True and confidence help with speed and slight color variations
+    all_raids = list(pyautogui.locateAllOnScreen(image, confidence=confidence))
+    
+    if not all_raids:
+        log_msg("No raids found on screen.", log_widget)
+        return False
+
+    for raid_box in all_raids:
+        # raid_box is (left, top, width, height)
         
-def post_battle(IMAGES, timeout=5.0, confidence=CONFIDENCE, log_widget=None):
+        # 2. Check if 'In Battle' exists INSIDE this specific raid banner area
+        # We limit the search region to speed it up and avoid finding other raids
+        is_busy = pyautogui.locateOnScreen(
+            IMAGES['in_battle'], 
+            region=(raid_box.left- 20, raid_box.top - 20, raid_box.width + 20, raid_box.height + 20),
+            confidence=CONFIDENCE
+        )
+        
+        if is_busy is None:
+            log_msg(f"Found available raid at {raid_box.left}, {raid_box.top}. Clicking...", log_widget)
+            # Click the center of the available raid
+            pyautogui.click(pyautogui.center(raid_box))
+            return True
+        else:
+            log_msg("Raid found, but it is already 'In Battle'. Skipping...", log_widget)
+
+    log_msg("All visible raids are currently occupied.", log_widget)
+    return False
+        
+def post_battle(IMAGES, timeout=3.0, confidence=CONFIDENCE, log_widget=None):
     ok = IMAGES.get("ok")
     time.sleep(1.0)
     start_time = time.time()
@@ -140,7 +173,7 @@ def next_page(IMAGES, log_widget=None):
     """Go to the next page in menus.
     """
     log_msg("Navigating to next page", log_widget)
-    if IMAGES.get('down_max') and pyautogui.locateOnScreen(IMAGES['down_max'], confidence=1):
+    if IMAGES.get('down_max') and pyautogui.locateOnScreen(IMAGES['down_max'], confidence=0.99):
         log_msg("Reached end of page.")
         return False
     else:

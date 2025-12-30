@@ -16,6 +16,7 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False):
         while state.get("running", False):
             if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
                 log_msg("Raid already ended - OK button found", log_widget)
+                find_and_click(IMAGES['reload'], optional=True, log_widget=log_widget)
                 break
             
             if find_and_click(IMAGES['support_req'], optional=True, log_widget=log_widget):
@@ -49,11 +50,11 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
         if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             log_msg("Defeated detected cancelling the revive...", log_widget)
             # if find_and_click(IMAGES["cancel"], log_widget=log_widget):
-            if find_and_click_text(['Cancel'], log_widget=log_widget):
+            if find_and_click(IMAGES['cancel'], log_widget=log_widget):
                 if rescue_active or host_raid:
                     log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
                     # find_and_click(IMAGES['cancel'], log_widget=log_widget)
-                    find_and_click_text(['Cancel'], log_widget=log_widget)
+                    find_and_click(IMAGES['cancel'], log_widget=log_widget)
                     break
                 else:
                     log_msg("Rescue is disabled or doesn't exist - returning to quest list", log_widget)
@@ -72,7 +73,9 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
             log_msg("Battle ended - Return Raid button found", log_widget)
             break
 
-        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) and not find_text(['sec'], log_widget=log_widget):
+        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) \
+            and not find_text(['sec'], log_widget=log_widget) \
+            and not (IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE)):
             if find_text(['Subjugation?'], log_widget=log_widget):
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
             else:

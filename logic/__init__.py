@@ -9,9 +9,11 @@ from .core import (
     test_function,
     prevent_sleep,
     allow_sleep,
+    find_and_click_all,
+    find_text
 )
 from .battle import combat_sequence, wait_for_battle_end, check_stamina, ongoing_battle
-from .flows import farm_loop, quest_rush, raid_host, episode_rush
+from .flows import farm_loop, quest_rush, raid_host, episode_rush, farm_raid
 
 # Re-export public API for backwards compatibility with existing imports
 __all__ = [
@@ -23,6 +25,9 @@ __all__ = [
     "_inc_loop",
     "find_and_click",
     "find_and_click_text",
+    "find_and_click_all",
+    "find_text",
+    "next_page",
     "test_function"
     "next_page",
     "prevent_sleep",
@@ -34,5 +39,6 @@ __all__ = [
     "farm_loop",
     "quest_rush",
     "raid_host",
-    "episode_rush"
+    "episode_rush",
+    "farm_raid"
 ]

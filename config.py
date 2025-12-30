@@ -36,6 +36,7 @@ IMAGES = {
     "ok_inactive": get_img('KHR_ok_inactive'),
     "return": get_img('KHR_return'),
     "return_raid": get_img('KHR_return_raid'),
+    "return_raid_battle": get_img('KHR_return_raid_battle'),
     "retry": get_img('KHR_retry'),
     "defeat": get_img('KHR_defeat_screen'),
     "defeat_elixir": get_img('KHR_defeat_continue'),
@@ -50,13 +51,17 @@ IMAGES = {
     "down": get_img('KHR_down'),
     "down_max": get_img('KHR_down_max'),
     "limit": get_img('KHR_limit'),
-    
+    "in_battle": get_img('KHR_in_battle'),
     "ep_start": get_img('KHR_episode_notif'),
     "ep_encounter": get_img('KHR_episode_encounter'),
     "ep_1": get_img('KHR_episode_1'),
     "ep_2": get_img('KHR_episode_2'),
     "ep_skip": get_img('KHR_episode_skip'),
-    "ep_return": get_img('KHR_episode_return')
+    "ep_return": get_img('KHR_episode_return'),
+    "reload": get_img('KHR_reload'),
+    "raid_event": get_img('KHR_raid_event'),
+    "raid_regular": get_img('KHR_raid_regular'),
+    "unconfirmed_battles": get_img('KHR_unconfirmed_battles')
 }
 
 

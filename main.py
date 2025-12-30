@@ -66,7 +66,7 @@ def _set_mode_buttons_state(state_value):
         btn_epic.configure(state=state_value)
         btn_retry.configure(state=state_value)
         btn_episode.configure(state=state_value)
-        # btn_raid_farm.configure(state=state_value)
+        btn_raid_farm.configure(state=state_value)
         # btn_tower.configure(state=state_value)
     except Exception:
         pass
@@ -159,7 +159,7 @@ btn_epic = ctk.CTkButton(mode_frame, text="Epic Quest Rush", width=120, command=
 btn_epic.grid(row=0, column=1, padx=2, pady=2)
 btn_retry = ctk.CTkButton(mode_frame, text="Retry Farm", width=120, command=lambda: start_mode(logic.farm_loop, "farm_loop", IMAGES, log))
 btn_retry.grid(row=1, column=0, padx=2, pady=2)
-btn_raid_farm = ctk.CTkButton(mode_frame, text="Farm Raid", width=120, state="disabled")
+btn_raid_farm = ctk.CTkButton(mode_frame, text="Farm Raid", width=120, command=lambda: start_mode(logic.farm_raid, "farm_raid", IMAGES, ELEMENTS, get_img, log))
 btn_raid_farm.grid(row=1, column=1, padx=2, pady=2)
 btn_tower = ctk.CTkButton(mode_frame, text="Tower Farm", width=120, state="disabled")
 btn_tower.grid(row=2, column=0, padx=2, pady=2)
