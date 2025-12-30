@@ -7,7 +7,11 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False):
     if find_and_click(IMAGES['support']):
         log_msg("Support found and clicked", log_widget)
         
-        find_and_click(IMAGES['go_quest'])
+        find_and_click(IMAGES['go_quest'], log_widget=log_widget)
+        
+        if find_and_click(IMAGES['ok'], timeout=4.0, optional=True, log_widget=log_widget):
+            log_msg("Raid already ended - OK button found.", log_widget)
+            return
         
         while state.get("running", False):
             if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
@@ -88,11 +92,11 @@ def check_stamina(IMAGES, log_widget=None, timeout=1.5):
 
         elapsed = time.time() - start_time 
         if elapsed >= timeout:
-            log_msg("Stamina is still sufficient", log_widget)
+            log_msg("Stamina or BP is still sufficient", log_widget)
             return False
 
-        if IMAGES.get('stamina_check') and pyautogui.locateOnScreen(IMAGES['stamina_check'], confidence=CONFIDENCE):
-            log_msg("Stamina low detected", log_widget)
+        if (IMAGES.get('stamina_check') and pyautogui.locateOnScreen(IMAGES['stamina_check'], confidence=CONFIDENCE)) or (IMAGES.get('bp_check') and pyautogui.locateOnScreen(IMAGES['bp_check'], confidence=CONFIDENCE)):
+            log_msg("Stamina or BP low detected", log_widget)
             if find_and_click(IMAGES['stamina_use'], log_widget=log_widget):
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
                 return True

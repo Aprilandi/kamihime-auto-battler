@@ -120,7 +120,7 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
         time.sleep(0.1)
 
         
-def post_battle(IMAGES, timeout=2.0, confidence=CONFIDENCE, log_widget=None):
+def post_battle(IMAGES, timeout=5.0, confidence=CONFIDENCE, log_widget=None):
     ok = IMAGES.get("ok")
     time.sleep(1.0)
     start_time = time.time()
@@ -130,7 +130,7 @@ def post_battle(IMAGES, timeout=2.0, confidence=CONFIDENCE, log_widget=None):
             return True
         else:
             if find_and_click(ok, confidence=confidence, optional=True, timeout=0.5, log_widget=log_widget):
-                start_time = start_time + 0.5
+                start_time = time.time()
             
         time.sleep(SLEEP)
         

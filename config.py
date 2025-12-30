@@ -40,6 +40,7 @@ IMAGES = {
     "defeat": get_img('KHR_defeat_screen'),
     "defeat_elixir": get_img('KHR_defeat_continue'),
     "stamina_check": get_img('KHR_stamina_check'),
+    "bp_check": get_img('KHR_bp_check'),
     "stamina_use": get_img('KHR_stamina_use'),
     "ongoing": get_img('KHR_give_up_resume'),
     "quest": get_img('KHR_quest'),
