@@ -7,6 +7,23 @@ IMPORTANT: This tool controls your mouse and keyboard. Only run it when you can 
 
 ---
 
+## Download
+
+Get the latest Windows build from GitHub Releases:
+
+👉 [Download K-Bot for Windows](https://github.com/Aprilandi/kamihime-auto-battler/releases/latest)
+
+- Note: Currently optimized for 1920x1080 with 100% display scaling.
+- If your resolution differs, add matching images under `images/<your-resolution>/` and rebuild using the provided PyInstaller command (or `main.spec`).
+
+## How to build your own (if you want to modify images)
+
+1. **Install dependencies**
+   ```powershell
+   pip install -r requirements.txt
+
+---
+
 ## Quick overview (non-technical)
 - Double-click `main.py` (or run a single command in PowerShell) to open the small K-Bot window.
 - Click one of the mode buttons to start: `Raid Rot`, `Epic Rush`, or `Retry Farm`.
