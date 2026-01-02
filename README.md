@@ -22,6 +22,10 @@ Get the latest Windows build from GitHub Releases:
    ```powershell
    pip install -r requirements.txt
 
+2. **Build the script**
+   ```powershell
+   pyinstaller main.spec
+
 ---
 
 ## Quick overview (non-technical)

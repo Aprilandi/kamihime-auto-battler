@@ -3,3 +3,4 @@ opencv-python
 Pillow
 customtkinter
 keyboard
+pyinstaller
