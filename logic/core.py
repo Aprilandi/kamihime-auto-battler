@@ -221,7 +221,7 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
                 while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
                     time.sleep(SLEEP)
                 # for in case of rank up
-                find_and_click(IMAGES['ok'], optional=True, timeot=3.0, log_widget=log_widget)
+                find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
                 pyautogui.click(pyautogui.center(raid_box))
 
             return True
