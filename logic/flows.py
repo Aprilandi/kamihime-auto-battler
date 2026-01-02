@@ -2,7 +2,7 @@ import time
 import pyautogui
 from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all
 from .battle import check_stamina, combat_sequence, ongoing_battle
-from config import SLEEP, CONFIDENCE, CONNECTING
+from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES
 
 def farm_loop(IMAGES, log_widget=None):
     """Main farming loop to run battles continuously.
@@ -10,11 +10,12 @@ def farm_loop(IMAGES, log_widget=None):
     loop_count = 0
     log_msg("Starting farming loop", log_widget)
     while state.get("running", False):
-        if find_and_click(IMAGES.get('retry'), log_widget=log_widget):
+        if find_and_click(IMAGES.get('retry'), log_widget=log_widget, robust=False):
             loop_count = _inc_loop("farm_loop", log_widget)
 
             time.sleep(SLEEP)
             check_stamina(IMAGES, log_widget=log_widget)
+            find_and_click(IMAGES['challenge'], log_widget=log_widget, optional=True)
 
             combat_sequence(IMAGES, log_widget)
         
@@ -156,7 +157,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                 log_msg("Handling raid entry", log_widget)
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
 
-                if find_and_click(raid_image, confidence=0.85, log_widget=log_widget, optional=True):
+                if find_and_click(raid_image, confidence=0.85, log_widget=log_widget, optional=True, robust=False):
                     if ongoing_battle(IMAGES, log_widget=log_widget):
                         continue
                     
@@ -185,7 +186,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                         time.sleep(SLEEP)
                         check_stamina(IMAGES, log_widget)
                         
-                        combat_sequence(IMAGES, log_widget=log_widget, host_raid=True)
+                        combat_sequence(IMAGES, log_widget=log_widget, host_raid=True, is_raid=True)
                         
                         # find_and_click_text(['Return'], log_widget=log_widget)
                         find_and_click(IMAGES['return_raid'])
@@ -218,33 +219,38 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
     log_msg("Starting Raid Farm", log_widget)
 
     while state.get("running", False):
-        for index, element in enumerate(ELEMENTS):
-            if not state.get("running", False):
-                log_msg(f"Element {element} is not enabled. Skipping...")
-                return
-            
-            element_cfg = state["raid_settings"].get(element, {})
-            # skip whole element if disabled
-            if not element_cfg.get("enable", True):
-                log_msg(f"Element {element_cfg} is not enabled. Skipping")
-                continue
+        # New scanning order for farm raid: iterate difficulties first, then elements.
+        # This scans all elements for a given difficulty before moving to the next
+        # difficulty which can be useful when farming a specific difficulty across
+        # elements.
+        for difficulty in DIFFICULTIES:
+            for index, element in enumerate(ELEMENTS):
+                defeat = False
+                if not state.get("running", False):
+                    return
 
-            for difficulty, enabled in element_cfg.get("difficulty", {}).items():
-                if not enabled:
-                    log_msg(f"Element {element_cfg} Difficulty {difficulty} is not enabled. Skipping")
+                element_cfg = state["raid_settings"].get(element, {})
+                # skip whole element if disabled
+                if not element_cfg.get("enable", True):
                     continue
-                
+
+                # skip this difficulty for this element if disabled
+                if not element_cfg.get("difficulty", {}).get(difficulty, False):
+                    continue
+
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
 
-                if not find_and_click_all(raid_image):
-                    continue
-                
-                check_stamina(IMAGES, log_widget=log_widget)
-                
-                combat_sequence(IMAGES, log_widget=log_widget)
-                
-                find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True, timeout=2.0)
+                if find_and_click_all(raid_image, confidence=0.85, log_widget=log_widget) is True:
+                    check_stamina(IMAGES, log_widget=log_widget)
 
+                    if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
+                        find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True, timeout=2.0)
+                    else:
+                        defeat = True
+                        break
+
+            if defeat:
+                break
 
         if next_page(IMAGES, log_widget=log_widget):
             log_msg("Navigated to next page of raids", log_widget)
@@ -253,7 +259,9 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
             find_and_click(IMAGES['raid_event'], log_widget=log_widget)
             find_and_click(IMAGES['raid_regular'], log_widget=log_widget)
             if find_and_click(IMAGES['unconfirmed_battles'], log_widget=log_widget, optional=True):
-                find_and_click(IMAGES['batch'], log_widget=log_widget)
-                while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
-                    time.sleep(SLEEP)
+                if find_and_click(IMAGES['batch'], log_widget=log_widget):
+                    while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+                        time.sleep(SLEEP)
+                    # for in case of rank up
+                    find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
             

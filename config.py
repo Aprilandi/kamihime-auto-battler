@@ -2,21 +2,30 @@ import os
 import pyautogui
 import json
 
+import sys, os
+
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller exe"""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+
 PREFS_FILENAME = "raid_prefs.json"
 
 pyautogui.useImageNotFoundException(False)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_img(name): 
-    # This joins BASE_DIR + 'images' + 'filename.png'
-    return os.path.join(BASE_DIR, "images", f"{name}.png")
+    # This joins'images' + 'filename.png'
+    return resource_path(os.path.join("images", "1920x1080", f"{name}.png"))
 
 CONFIDENCE = 0.8
 SLEEP = 0.5
 
 # config.py
 ELEMENTS = ["fire", "water", "wind", "thunder", "light", "dark", "phantom"]
-DIFFICULTIES = ["guardian_plus", "guardian", "ragnarok", "ultimate", "expert", "standard"]
+DIFFICULTIES = ["malicious", "guardian_plus", "guardian", "ragnarok", "ultimate", "expert", "standard"]
 CONNECTING = get_img('KHR_connecting')
 
 IMAGES = {
@@ -65,7 +74,7 @@ IMAGES = {
 }
 
 
-PREFS_PATH = os.path.join(BASE_DIR, PREFS_FILENAME)
+PREFS_PATH = resource_path(os.path.join(PREFS_FILENAME))
 
 
 def load_prefs():

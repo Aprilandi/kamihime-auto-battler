@@ -1,13 +1,13 @@
 import time
 import pyautogui
 import os
-from config import CONFIDENCE, IMAGES, SLEEP, CONNECTING
+from config import CONFIDENCE, IMAGES, SLEEP, CONNECTING, resource_path
 from PIL import Image
 import pytesseract
 
 # Path relative to your project
-pytesseract.pytesseract.tesseract_cmd = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "tesseract", "tesseract.exe")
+pytesseract.pytesseract.tesseract_cmd = resource_path(
+    os.path.join("tesseract", "tesseract.exe")
 )
 
 
@@ -77,7 +77,7 @@ except Exception:
         return False
 
 
-def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None):
+def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None, robust=True):
     """Find an image on screen and click it.
     """
     if not image:
@@ -96,8 +96,8 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
     while state.get("running", False): 
         btn = pyautogui.locateOnScreen(image, confidence=confidence)
 
-        if btn:
-            log_msg(f"Found {name}, clicking", log_widget) 
+        if btn and not robust:
+            log_msg(f"Found {name} (Non Robust), clicking", log_widget) 
             log_msg("Waiting for connecting to disappear", log_widget)
             while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
                 time.sleep(SLEEP)
@@ -109,7 +109,74 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
                 time.sleep(SLEEP)
                 pyautogui.click(btn.left + 5, btn.top + 5)
             log_msg(f"Clicked {name}", log_widget)
-            return True 
+            return True
+
+        if btn and robust:
+            log_msg(f"Found {name} (Robust), attempting click", log_widget)
+
+            # Try a robust click-and-confirm routine. Games can be flaky and may
+            # not register a single click immediately; we attempt multiple clicks
+            # and confirm success by checking for CONNECTING or disappearance of
+            # the target image in the same region.
+            def _click_and_confirm(box, attempts=5, delay=0.18):
+                cx, cy = pyautogui.center(box)
+                region = (box.left, box.top, box.width, box.height)
+
+                for i in range(attempts):
+                    try:
+                        # Primary click
+                        pyautogui.click(cx, cy)
+                    except Exception:
+                        try:
+                            # Fallback: click near top-left
+                            pyautogui.click(box.left + 5, box.top + 5)
+                        except Exception:
+                            pass
+
+                    # small pause to let the game react
+                    time.sleep(delay)
+
+                    # If CONNECTING appears, wait until it disappears and treat as success
+                    if CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+                        log_msg("Detected CONNECTING after click, waiting for it to finish...", log_widget)
+                        # Wait until CONNECTING is gone (with a timeout)
+                        start = time.time()
+                        while time.time() - start < 8.0:
+                            if not pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+                                log_msg("CONNECTING cleared", log_widget)
+                                break
+                            time.sleep(0.25)
+                        # timed out waiting for connect to finish; try again
+
+                    # If the target image is no longer present in the same region,
+                    # assume the click succeeded.
+                    found_still = pyautogui.locateOnScreen(image, region=region, confidence=confidence)
+                    if not found_still:
+                        log_msg("Target disappeared after click; assuming success", log_widget)
+                        return True
+
+                    # otherwise retry (maybe the click didn't register)
+                    log_msg(f"Click attempt {i+1} did not register, retrying...", log_widget)
+
+                # As a last resort, try a longer press-release
+                try:
+                    pyautogui.mouseDown(cx, cy)
+                    time.sleep(0.35)
+                    pyautogui.mouseUp(cx, cy)
+                except Exception:
+                    pass
+
+                # Final short check
+                if not pyautogui.locateOnScreen(image, region=region, confidence=confidence):
+                    return True
+                return False
+
+            success = _click_and_confirm(btn)
+            if success:
+                log_msg(f"Clicked {name}", log_widget)
+                return True
+            else:
+                log_msg(f"Click for {name} did not register; continuing search", log_widget)
         
         if optional: 
             elapsed = time.time() - start_time 
@@ -146,23 +213,33 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
             log_msg(f"Found available raid at {raid_box.left}, {raid_box.top}. Clicking...", log_widget)
             # Click the center of the available raid
             pyautogui.click(pyautogui.center(raid_box))
+            if find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True, confidence=0.99) is True:
+                log_msg("Only 3 raid battle at once allowed. Waiting...", log_widget)
+                return False
+            if find_and_click(IMAGES['batch'], log_widget=log_widget, optional=True):
+                log_msg("Completing batch raid...", log_widget)
+                while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+                    time.sleep(SLEEP)
+                # for in case of rank up
+                find_and_click(IMAGES['ok'], optional=True, timeot=3.0, log_widget=log_widget)
+                return False
+
             return True
         else:
             log_msg("Raid found, but it is already 'In Battle'. Skipping...", log_widget)
 
     log_msg("All visible raids are currently occupied.", log_widget)
-    return False
+    return True
         
-def post_battle(IMAGES, timeout=3.0, confidence=CONFIDENCE, log_widget=None):
+def post_battle(IMAGES, timeout=5.0, confidence=CONFIDENCE, log_widget=None):
     ok = IMAGES.get("ok")
-    time.sleep(1.0)
     start_time = time.time()
 
     while state.get("running", False):
         if (time.time() - start_time) >= timeout:
             return True
         else:
-            if find_and_click(ok, confidence=confidence, optional=True, timeout=0.5, log_widget=log_widget):
+            if find_and_click(ok, confidence=confidence, optional=True, timeout=1.0, log_widget=log_widget):
                 start_time = time.time()
             
         time.sleep(SLEEP)
