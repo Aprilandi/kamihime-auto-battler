@@ -222,7 +222,7 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
                     time.sleep(SLEEP)
                 # for in case of rank up
                 find_and_click(IMAGES['ok'], optional=True, timeot=3.0, log_widget=log_widget)
-                return False
+                pyautogui.click(pyautogui.center(raid_box))
 
             return True
         else:

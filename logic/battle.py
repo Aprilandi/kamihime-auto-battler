@@ -4,15 +4,20 @@ from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_t
 from config import SLEEP, CONFIDENCE
 
 def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False):
-    if find_and_click(IMAGES['support']):
+    if find_and_click(IMAGES['support'], log_widget=log_widget):
         log_msg("Support found and clicked", log_widget)
         
         find_and_click(IMAGES['go_quest'], log_widget=log_widget)
         
+        # if there is failed raid it shows up after go quest
+        if find_and_click(IMAGES['batch'], timeout=4.0, optional=True, log_widget=log_widget):
+            find_and_click(IMAGES['support'], log_widget=log_widget)
+            find_and_click(IMAGES['go_quest'], log_widget=log_widget)
+
         if find_and_click(IMAGES['ok'], timeout=4.0, optional=True, log_widget=log_widget):
             log_msg("Raid already ended - OK button found.", log_widget)
             return False
-        
+
         while state.get("running", False):
             if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
                 log_msg("Raid already ended - OK button found", log_widget)
