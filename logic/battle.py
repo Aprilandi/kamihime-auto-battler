@@ -51,9 +51,11 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False):
             return True
 
 
-def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=False, is_raid=False):
+def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=False, is_raid=False, timeout=600):
     log_msg("Waiting for battle to end...", log_widget)
-    
+
+    start_time = time.time()
+
     while state.get("running", False):
         if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             log_msg("Defeated detected cancelling the revive...", log_widget)
@@ -91,7 +93,21 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
                 if is_raid:
                     find_and_click(IMAGES['ok'], log_widget=log_widget)
                 break
-
+        
+        if (time.time() - start_time) >= timeout:
+            log_msg("Probably connection lost, reloading...", log_widget)
+            if find_and_click(IMAGES['reload'], log_widget=log_widget):
+                if find_and_click(IMAGES['attack'], optional=True, timeout=3.0, log_widget=log_widget):
+                    log_msg("Battle is still on going, continuing...", log_widget=log_widget)
+                    continue
+                if find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget):
+                    while state.get("running", False):
+                        if find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True):
+                            return False
+                        if find_and_click(IMAGES['start_game'], log_widget=log_widget, optional=True):
+                            if find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget, optional=True):
+                                return False
+                    
         time.sleep(SLEEP)
 
     post_battle(IMAGES, log_widget=log_widget)

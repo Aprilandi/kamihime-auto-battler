@@ -55,6 +55,7 @@ IMAGES = {
     "ongoing": get_img('KHR_give_up_resume'),
     "quest": get_img('KHR_quest'),
     "raid_quest": get_img('KHR_raid_quests'),
+    "raid_quest_available": get_img('KHR_raid_quest_available'),
     "quest_list": get_img('KHR_quest_list'),
     "batch": get_img('KHR_batch_check'),
     "down": get_img('KHR_down'),
@@ -70,7 +71,8 @@ IMAGES = {
     "reload": get_img('KHR_reload'),
     "raid_event": get_img('KHR_raid_event'),
     "raid_regular": get_img('KHR_raid_regular'),
-    "unconfirmed_battles": get_img('KHR_unconfirmed_battles')
+    "unconfirmed_battles": get_img('KHR_unconfirmed_battles'),
+    "start_game": get_img("KHR_start_game")
 }
 
 
