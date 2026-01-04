@@ -101,10 +101,13 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
                     log_msg("Battle is still on going, continuing...", log_widget=log_widget)
                     continue
                 if find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget):
+                    log_msg("Battle either ended or connection lost...", log_widget=log_widget)
                     while state.get("running", False):
                         if find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True):
+                            log_msg("Battle already ended, returning to raid quest list", log_widget=log_widget)
                             return False
                         if find_and_click(IMAGES['start_game'], log_widget=log_widget, optional=True):
+                            log_msg("Connection lost, returning to main page going to raid quests", log_widget=log_widget)
                             if find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget, optional=True):
                                 return False
                     
