@@ -13,7 +13,7 @@ Get the latest Windows build from GitHub Releases:
 
 👉 [Download K-Bot for Windows](https://github.com/Aprilandi/kamihime-auto-battler/releases/latest)
 
-- Note: Currently optimized for 1920x1080 with 100% display scaling.
+- Note: Currently optimized for 1920x1080 with 100% display scaling and game setting NO ZOOM (Zoom in nor Zoom out).
 - If your resolution differs, add matching images under `images/<your-resolution>/` and rebuild using the provided PyInstaller command (or `main.spec`).
 
 ## How to build your own (if you want to modify images)
