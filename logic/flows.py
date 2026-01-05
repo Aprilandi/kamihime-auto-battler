@@ -156,8 +156,13 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                 
                 log_msg("Handling raid entry", log_widget)
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
+                
+                if difficulty in ['ultimate', 'ragnarok']:
+                    confidence = 0.95
+                else:
+                    confidence = 0.85
 
-                if find_and_click(raid_image, confidence=0.85, log_widget=log_widget, optional=True, robust=False):
+                if find_and_click(raid_image, confidence=confidence, log_widget=log_widget, optional=True, robust=False):
                     if ongoing_battle(IMAGES, log_widget=log_widget):
                         continue
                     

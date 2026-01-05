@@ -229,7 +229,7 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
             log_msg("Raid found, but it is already 'In Battle'. Skipping...", log_widget)
 
     log_msg("All visible raids are currently occupied.", log_widget)
-    return True
+    return False
         
 def post_battle(IMAGES, timeout=5.0, confidence=CONFIDENCE, log_widget=None):
     ok = IMAGES.get("ok")

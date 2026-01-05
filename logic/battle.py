@@ -84,7 +84,7 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
             log_msg("Battle ended - Return Raid button found", log_widget)
             break
 
-        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) \
+        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) \
             and not find_text(['sec'], log_widget=log_widget) \
             and not (IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE)):
             if find_text(['Subjugation?'], log_widget=log_widget):
@@ -97,18 +97,21 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
         if (time.time() - start_time) >= timeout:
             log_msg("Probably connection lost, reloading...", log_widget)
             if find_and_click(IMAGES['reload'], log_widget=log_widget):
+                time.sleep(5.0)
                 if find_and_click(IMAGES['attack'], optional=True, timeout=3.0, log_widget=log_widget):
                     log_msg("Battle is still on going, continuing...", log_widget=log_widget)
+                    start_time = time.time()
                     continue
                 if find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget):
                     log_msg("Battle either ended or connection lost...", log_widget=log_widget)
                     while state.get("running", False):
+                        find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True) # If there are scoreboard
                         if find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True):
                             log_msg("Battle already ended, returning to raid quest list", log_widget=log_widget)
                             return False
                         if find_and_click(IMAGES['start_game'], log_widget=log_widget, optional=True):
                             log_msg("Connection lost, returning to main page going to raid quests", log_widget=log_widget)
-                            if find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget, optional=True):
+                            if find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget):
                                 return False
                     
         time.sleep(SLEEP)
