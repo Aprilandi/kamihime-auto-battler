@@ -4,6 +4,7 @@ import os
 from config import CONFIDENCE, IMAGES, SLEEP, CONNECTING, resource_path
 from PIL import Image
 import pytesseract
+import re
 
 # Path relative to your project
 pytesseract.pytesseract.tesseract_cmd = resource_path(
@@ -90,6 +91,12 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
         name = str(image)
         
     log_msg(f"Searching for {name}", log_widget)
+
+    if CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+        log_msg("Detected CONNECTING, waiting for it to finish...", log_widget)
+        while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+            time.sleep(SLEEP)
+
     
     start_time = time.time()
     
@@ -98,9 +105,6 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
 
         if btn and not robust:
             log_msg(f"Found {name} (Non Robust), clicking", log_widget) 
-            log_msg("Waiting for connecting to disappear", log_widget)
-            while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
-                time.sleep(SLEEP)
             try:
                 time.sleep(SLEEP)
                 pyautogui.click(pyautogui.center(btn))
@@ -113,70 +117,19 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
 
         if btn and robust:
             log_msg(f"Found {name} (Robust), attempting click", log_widget)
+            
+            region = (btn.left, btn.top, btn.width, btn.height)
 
-            # Try a robust click-and-confirm routine. Games can be flaky and may
-            # not register a single click immediately; we attempt multiple clicks
-            # and confirm success by checking for CONNECTING or disappearance of
-            # the target image in the same region.
-            def _click_and_confirm(box, attempts=5, delay=0.18):
-                cx, cy = pyautogui.center(box)
-                region = (box.left, box.top, box.width, box.height)
+            try:
+                pyautogui.click(pyautogui.center(btn))
+            except Exception:
+                pyautogui.click(btn.left + 5, btn.top + 5)
 
-                for i in range(attempts):
-                    try:
-                        # Primary click
-                        pyautogui.click(cx, cy)
-                    except Exception:
-                        try:
-                            # Fallback: click near top-left
-                            pyautogui.click(box.left + 5, box.top + 5)
-                        except Exception:
-                            pass
-
-                    # small pause to let the game react
-                    time.sleep(delay)
-
-                    # If CONNECTING appears, wait until it disappears and treat as success
-                    if CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
-                        log_msg("Detected CONNECTING after click, waiting for it to finish...", log_widget)
-                        # Wait until CONNECTING is gone (with a timeout)
-                        start = time.time()
-                        while time.time() - start < 8.0:
-                            if not pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
-                                log_msg("CONNECTING cleared", log_widget)
-                                break
-                            time.sleep(0.25)
-                        # timed out waiting for connect to finish; try again
-
-                    # If the target image is no longer present in the same region,
-                    # assume the click succeeded.
-                    found_still = pyautogui.locateOnScreen(image, region=region, confidence=confidence)
-                    if not found_still:
-                        log_msg("Target disappeared after click; assuming success", log_widget)
-                        return True
-
-                    # otherwise retry (maybe the click didn't register)
-                    log_msg(f"Click attempt {i+1} did not register, retrying...", log_widget)
-
-                # As a last resort, try a longer press-release
-                try:
-                    pyautogui.mouseDown(cx, cy)
-                    time.sleep(0.35)
-                    pyautogui.mouseUp(cx, cy)
-                except Exception:
-                    pass
-
-                # Final short check
-                if not pyautogui.locateOnScreen(image, region=region, confidence=confidence):
-                    return True
-                return False
-
-            success = _click_and_confirm(btn)
-            if success:
-                log_msg(f"Clicked {name}", log_widget)
+            found_still = pyautogui.locateOnScreen(image, region=region, confidence=confidence)
+                    
+            if not found_still:
+                log_msg(f"Button {name} disappeared, assumed success.", log_widget)
                 return True
-            else:
-                log_msg(f"Click for {name} did not register; continuing search", log_widget)
         
         if optional: 
             elapsed = time.time() - start_time 
@@ -223,6 +176,14 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
                 # for in case of rank up
                 find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
                 pyautogui.click(pyautogui.center(raid_box))
+            if pyautogui.locateOnScreen(IMAGES['cancel'], confidence=CONFIDENCE) \
+                and not pyautogui.locateOnScreen(IMAGES['stamina_use'], confidence=CONFIDENCE) \
+                and not pyautogui.locateOnScreen(IMAGES['batch'], confidence=CONFIDENCE):
+                find_and_click(IMAGES['cancel'], log_widget=log_widget)
+                find_and_click(IMAGES['ok'], log_widget=log_widget)
+                find_and_click(IMAGES['start_game'], log_widget=log_widget)
+                find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget)
+                return False
 
             return True
         else:
@@ -255,19 +216,19 @@ def next_page(IMAGES, log_widget=None):
         return False
     else:
         log_msg("Searching the down button...")
-        if find_and_click(IMAGES.get('down'), log_widget=log_widget):
+        if find_and_click(IMAGES.get('down'), log_widget=log_widget, robust=False):
             time.sleep(1.0)
             return True
 
 
 def find_text(texts, log_widget=None):
-    screenshot = pyautogui.screenshot() 
-    
-    textImage = pytesseract.image_to_string(screenshot)
-    
+    screenshot = pyautogui.screenshot()
+    text_image = pytesseract.image_to_string(screenshot).lower()
+
     for t in texts:
-        if t in textImage:
+        if t.lower() in text_image:
             return True
+
     return False
 
 

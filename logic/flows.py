@@ -139,7 +139,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
         log_msg(f"Selecting element: {element}", log_widget)
 
         if index > 0:
-            find_and_click(get_img(f"KHR_raid_{element}"), log_widget=log_widget, confidence=0.98)
+            find_and_click(get_img(f"KHR_raid_{element}"), log_widget=log_widget, confidence=0.98, robust=False)
 
         for difficulty, enabled in element_cfg.get("difficulty", {}).items():
             if not enabled:
@@ -158,7 +158,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
                 
                 if difficulty in ['ultimate', 'ragnarok']:
-                    confidence = 0.95
+                    confidence = 0.90
                 else:
                     confidence = 0.85
 
@@ -244,8 +244,13 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                     continue
 
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
+                
+                if element in ['phantom']:
+                    confidence = 0.99
+                else:
+                    confidence = 0.85
 
-                if find_and_click_all(raid_image, confidence=0.85, log_widget=log_widget) is True:
+                if find_and_click_all(raid_image, confidence=confidence, log_widget=log_widget) is True:
                     check_stamina(IMAGES, log_widget=log_widget)
 
                     if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:

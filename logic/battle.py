@@ -85,14 +85,13 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
             break
 
         if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) \
-            and not find_text(['sec'], log_widget=log_widget) \
-            and not (IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE)):
-            if find_text(['Subjugation?'], log_widget=log_widget):
-                find_and_click(IMAGES['ok'], log_widget=log_widget)
-            else:
-                if is_raid:
-                    find_and_click(IMAGES['ok'], log_widget=log_widget)
-                break
+            and not find_text(['sec left', 'min', 'minute', 'requet', 'request', 'continue'], log_widget=log_widget):
+            log_msg("Battle ended - Ok button found", log_widget)                
+            break
+        elif IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) \
+            and find_text(['subjugation?'], log_widget=log_widget):
+            log_msg("Rescue available, completing...", log_widget)
+            find_and_click(IMAGES['ok'], log_widget=log_widget)
         
         if (time.time() - start_time) >= timeout:
             log_msg("Probably connection lost, reloading...", log_widget)
@@ -147,7 +146,7 @@ def ongoing_battle(IMAGES, log_widget=None, timeout=1.5):
             log_msg("No ongoing battle detected", log_widget)
             return False
 
-        if IMAGES.get("ongoing") and pyautogui.locateOnScreen(IMAGES["ongoing"], confidence=CONFIDENCE):
+        if IMAGES.get("ongoing") and pyautogui.locateOnScreen(IMAGES["ongoing"], confidence=0.90):
             log_msg("Ongoing battle detected", log_widget)
             find_and_click(IMAGES['cancel'], log_widget=log_widget)
             return True
