@@ -4,7 +4,7 @@ from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_t
 from config import SLEEP, CONFIDENCE
 
 def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False):
-    if find_and_click(IMAGES['support'], log_widget=log_widget):
+    if find_and_click(IMAGES['support'], log_widget=log_widget, robust=False):
         log_msg("Support found and clicked", log_widget)
         
         find_and_click(IMAGES['go_quest'], log_widget=log_widget)
@@ -146,7 +146,7 @@ def ongoing_battle(IMAGES, log_widget=None, timeout=1.5):
             log_msg("No ongoing battle detected", log_widget)
             return False
 
-        if IMAGES.get("ongoing") and pyautogui.locateOnScreen(IMAGES["ongoing"], confidence=0.90):
+        if IMAGES.get("ongoing") and pyautogui.locateOnScreen(IMAGES["ongoing"], confidence=0.99):
             log_msg("Ongoing battle detected", log_widget)
             find_and_click(IMAGES['cancel'], log_widget=log_widget)
             return True
