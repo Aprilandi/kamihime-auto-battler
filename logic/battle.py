@@ -1,31 +1,34 @@
 import time
 import pyautogui
-from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_text, find_and_click_text
+from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_text, find_and_click_text, wait
 from config import SLEEP, CONFIDENCE
 
 def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False):
+    if host_raid is True:
+        is_raid = True
     if find_and_click(IMAGES['support'], log_widget=log_widget, robust=False):
         log_msg("Support found and clicked", log_widget)
         
         find_and_click(IMAGES['go_quest'], log_widget=log_widget)
         
         # if there is failed raid it shows up after go quest
-        if find_and_click(IMAGES['batch'], timeout=4.0, optional=True, log_widget=log_widget):
+        if find_and_click(IMAGES['batch'], optional=True, log_widget=log_widget):
             find_and_click(IMAGES['support'], log_widget=log_widget)
             find_and_click(IMAGES['go_quest'], log_widget=log_widget)
 
-        if find_and_click(IMAGES['ok'], timeout=4.0, optional=True, log_widget=log_widget):
+        if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
             log_msg("Raid already ended - OK button found.", log_widget)
             return False
 
         while state.get("running", False):
-            if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
-                log_msg("Raid already ended - OK button found", log_widget)
-                find_and_click(IMAGES['reload'], optional=True, log_widget=log_widget)
-                break
-            
-            if find_and_click(IMAGES['support_req'], optional=True, log_widget=log_widget):
-                log_msg("Support request found and clicked", log_widget)
+            if is_raid is True:
+                if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
+                    log_msg("Raid already ended - OK button found", log_widget)
+                    find_and_click(IMAGES['reload'], optional=True, log_widget=log_widget)
+                    break
+                
+                if find_and_click(IMAGES['support_req'], optional=True, log_widget=log_widget, robust=False):
+                    log_msg("Support request found and clicked", log_widget)
             
             if find_and_click(IMAGES['attack'], log_widget=log_widget, optional=True):
                 log_msg("Attack button found and clicked", log_widget)
@@ -40,7 +43,7 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False):
         if rescue_present:
             if user_allows_rescue:
                 log_msg("Rescue available and enabled - clicking rescue", log_widget)
-                time.sleep(SLEEP)
+                # time.sleep(SLEEP)
                 find_and_click(IMAGES["rescue"], log_widget=log_widget, robust=False)
             else:
                 log_msg("Rescue available but user disabled rescue - not clicking", log_widget)
@@ -85,13 +88,17 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
             break
 
         if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) \
-            and not find_text(['sec left', 'min', 'minute', 'requet', 'request', 'continue'], log_widget=log_widget):
-            log_msg("Battle ended - Ok button found", log_widget)                
+            and not find_text(['sec left', 'sec', 'left', 'min', 'minute', 'requet', 'request', 'continue'], log_widget=log_widget):
+            log_msg("Battle ended - Ok button found", log_widget)
+            if is_raid is True:
+                find_and_click(IMAGES['ok'], log_widget=log_widget)
             break
         elif IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) \
             and find_text(['subjugation?'], log_widget=log_widget):
             log_msg("Rescue available, completing...", log_widget)
-            find_and_click(IMAGES['ok'], log_widget=log_widget)
+            find_and_click(IMAGES['ok'], log_widget=log_widget, robust=False)
+            while pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) and find_text(['subjugation?'], log_widget=log_widget):
+                time.sleep(SLEEP)
         
         if (time.time() - start_time) >= timeout:
             log_msg("Probably connection lost, reloading...", log_widget)
@@ -115,7 +122,7 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
                     
         time.sleep(SLEEP)
 
-    post_battle(IMAGES, log_widget=log_widget)
+    post_battle(IMAGES, log_widget=log_widget, confidence=0.85)
 
     return True
 
@@ -154,7 +161,7 @@ def ongoing_battle(IMAGES, log_widget=None, timeout=1.5):
         if IMAGES.get("batch") and pyautogui.locateOnScreen(IMAGES["batch"], confidence=CONFIDENCE):
             log_msg("Completed battle detected, completing via batch...", log_widget)
             find_and_click(IMAGES['batch'], log_widget=log_widget)
-            time.sleep(2.5)
+            # time.sleep(2.5)
             return True
                 
         time.sleep(SLEEP)

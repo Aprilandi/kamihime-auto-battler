@@ -1,6 +1,6 @@
 import time
 import pyautogui
-from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all
+from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait
 from .battle import check_stamina, combat_sequence, ongoing_battle
 from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES
 
@@ -13,9 +13,8 @@ def farm_loop(IMAGES, log_widget=None):
         if find_and_click(IMAGES.get('retry'), log_widget=log_widget, robust=False):
             loop_count = _inc_loop("farm_loop", log_widget)
 
-            time.sleep(SLEEP)
             check_stamina(IMAGES, log_widget=log_widget)
-            find_and_click(IMAGES['challenge'], log_widget=log_widget, optional=True)
+            find_and_click(IMAGES['challenge'], log_widget=log_widget, timeout=0.5, optional=True)
 
             combat_sequence(IMAGES, log_widget)
         
@@ -30,7 +29,7 @@ def quest_rush(IMAGES, log_widget=None):
         if find_and_click(IMAGES.get('story_start'), log_widget=log_widget, timeout=5.0, optional=True):
             loop_count = _inc_loop("epic_quest_rush", log_widget)
             
-            time.sleep(SLEEP)
+            # time.sleep(SLEEP)
             check_stamina(IMAGES, log_widget=log_widget)
 
             while state.get("running", False):
@@ -185,31 +184,31 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
 
                     # Only check for challenge/ok if not blocked
                     if IMAGES.get("challenge") and pyautogui.locateOnScreen(IMAGES["challenge"], confidence=CONFIDENCE):
+                        state["completed_raids"][element][difficulty] += 1
                         log_msg("Entry is possible (challenge)", log_widget)
                         find_and_click(IMAGES["challenge"], log_widget=log_widget)
                         
-                        time.sleep(SLEEP)
-                        check_stamina(IMAGES, log_widget)
-                        
-                        combat_sequence(IMAGES, log_widget=log_widget, host_raid=True, is_raid=True)
-                        
-                        # find_and_click_text(['Return'], log_widget=log_widget)
-                        find_and_click(IMAGES['return_raid'])
-                        state["completed_raids"][element][difficulty] += 1
-                        continue
-
-                    elif IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
-                        log_msg("Entry is possible (ok)", log_widget)
-                        find_and_click(IMAGES["ok"], log_widget=log_widget)
-                        
-                        time.sleep(SLEEP)
+                        # time.sleep(SLEEP)
                         check_stamina(IMAGES, log_widget)
                         
                         combat_sequence(IMAGES, log_widget=log_widget, host_raid=True)
                         
                         # find_and_click_text(['Return'], log_widget=log_widget)
                         find_and_click(IMAGES['return_raid'])
+                        continue
+
+                    elif IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
                         state["completed_raids"][element][difficulty] += 1
+                        log_msg("Entry is possible (ok)", log_widget)
+                        find_and_click(IMAGES["ok"], log_widget=log_widget)
+                        
+                        # time.sleep(SLEEP)
+                        check_stamina(IMAGES, log_widget)
+                        
+                        combat_sequence(IMAGES, log_widget=log_widget, host_raid=True)
+                        
+                        # find_and_click_text(['Return'], log_widget=log_widget)
+                        find_and_click(IMAGES['return_raid'])
                         continue
 
                 else:
@@ -270,8 +269,7 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
             find_and_click(IMAGES['raid_regular'], log_widget=log_widget)
             if find_and_click(IMAGES['unconfirmed_battles'], log_widget=log_widget, optional=True):
                 if find_and_click(IMAGES['batch'], log_widget=log_widget):
-                    while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
-                        time.sleep(SLEEP)
+                    wait(log_widget=log_widget)
                     # for in case of rank up
                     find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
             

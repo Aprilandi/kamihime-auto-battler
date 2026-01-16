@@ -92,12 +92,6 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
         
     log_msg(f"Searching for {name}", log_widget)
 
-    if CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
-        log_msg("Detected CONNECTING, waiting for it to finish...", log_widget)
-        while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
-            time.sleep(SLEEP)
-
-    
     start_time = time.time()
     
     while state.get("running", False): 
@@ -113,6 +107,7 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
                 time.sleep(SLEEP)
                 pyautogui.click(btn.left + 5, btn.top + 5)
             log_msg(f"Clicked {name}", log_widget)
+            wait(log_widget=log_widget)
             return True
 
         if btn and robust:
@@ -121,15 +116,20 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
             region = (btn.left, btn.top, btn.width, btn.height)
 
             try:
+                time.sleep(SLEEP)
                 pyautogui.click(pyautogui.center(btn))
             except Exception:
+                time.sleep(SLEEP)
                 pyautogui.click(btn.left + 5, btn.top + 5)
 
             found_still = pyautogui.locateOnScreen(image, region=region, confidence=confidence)
                     
             if not found_still:
                 log_msg(f"Button {name} disappeared, assumed success.", log_widget)
+                wait(log_widget=log_widget)
                 return True
+            else:
+                start_time = time.time()
         
         if optional: 
             elapsed = time.time() - start_time 
@@ -171,8 +171,9 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
                 return False
             if find_and_click(IMAGES['batch'], log_widget=log_widget, optional=True):
                 log_msg("Completing batch raid...", log_widget)
-                while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
-                    time.sleep(SLEEP)
+
+                wait(log_widget=log_widget)
+
                 # for in case of rank up
                 find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
                 pyautogui.click(pyautogui.center(raid_box))
@@ -191,7 +192,8 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
 
     log_msg("All visible raids are currently occupied.", log_widget)
     return False
-        
+
+
 def post_battle(IMAGES, timeout=5.0, confidence=CONFIDENCE, log_widget=None):
     ok = IMAGES.get("ok")
     start_time = time.time()
@@ -206,6 +208,7 @@ def post_battle(IMAGES, timeout=5.0, confidence=CONFIDENCE, log_widget=None):
         time.sleep(SLEEP)
         
     return False
+
 
 def next_page(IMAGES, log_widget=None):
     """Go to the next page in menus.
@@ -255,6 +258,33 @@ def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None):
 
         time.sleep(SLEEP)
         
+        
+def wait(timeout=5.0, sleep=0.1, log_widget=None, attempts=4):
+    time.sleep(SLEEP)
+    misses = 0
+    start_time = time.time()
+    
+    while state.get("running", False):
+        is_detected = CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE)
+        
+        if is_detected:
+            misses = 0
+            log_msg("Detected CONNECTING, waiting...", log_widget)
+            while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+                time.sleep(sleep)
+                if (time.time() - start_time) > timeout:
+                    return
+        else:
+            misses += 1
+            if misses >= attempts:
+                return
+
+        if (time.time() - start_time) > timeout:
+            return
+
+        time.sleep(sleep)
+
+
 def test_function(texts, timeout=1.0, optional=False, log_widget=None):
     screenshot = pyautogui.screenshot()
     data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
