@@ -145,23 +145,18 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                 log_msg(f"Element {element_cfg} Difficulty {difficulty} is not enabled. Skipping")
                 continue
             
-            completed_raid = state['completed_raids'].get(element, {}).get(difficulty, 0)
+            # completed_raid = state['completed_raids'].get(element, {}).get(difficulty, 0)
 
-            if completed_raid > 0 and completed_raid == state['max_runs'].get(element, 1):
-                log_msg(f"Skipping already completed raid: {element} - {difficulty}", log_widget)
-                continue
+            # if completed_raid > 0 and completed_raid == state['max_runs'].get(element, 1):
+            #     log_msg(f"Skipping already completed raid: {element} - {difficulty}", log_widget)
+            #     continue
 
             while state.get("running", False):
                 
                 log_msg("Handling raid entry", log_widget)
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
                 
-                if difficulty in ['ultimate', 'ragnarok']:
-                    confidence = 0.90
-                else:
-                    confidence = 0.85
-
-                if find_and_click(raid_image, confidence=confidence, log_widget=log_widget, optional=True, robust=False):
+                if find_and_click(raid_image, confidence=0.95, log_widget=log_widget, optional=True, robust=False):
                     if ongoing_battle(IMAGES, log_widget=log_widget):
                         continue
                     
@@ -244,12 +239,7 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
 
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
                 
-                if element in ['phantom']:
-                    confidence = 0.99
-                else:
-                    confidence = 0.85
-
-                if find_and_click_all(raid_image, confidence=confidence, log_widget=log_widget) is True:
+                if find_and_click_all(raid_image, confidence=0.95, log_widget=log_widget) is True:
                     if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
                         find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True, timeout=2.0)
                     else:
