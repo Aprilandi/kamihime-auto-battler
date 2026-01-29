@@ -1,7 +1,7 @@
 import time
 import pyautogui
-from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait
-from .battle import check_stamina, combat_sequence, ongoing_battle
+from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina
+from .battle import combat_sequence, ongoing_battle
 from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES
 
 def farm_loop(IMAGES, log_widget=None):
@@ -109,7 +109,7 @@ def episode_rush(IMAGES, log_widget=None):
                 
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
                 
-            find_and_click(IMAGES['ep_return'], log_widget=log_widget)
+            find_and_click(IMAGES['ep_return'], log_widget=log_widget, robust=False)
             
             find_and_click(IMAGES['ok'], log_widget=log_widget)
             
@@ -194,7 +194,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                         combat_sequence(IMAGES, log_widget=log_widget, host_raid=True)
                         
                         # find_and_click_text(['Return'], log_widget=log_widget)
-                        find_and_click(IMAGES['return_raid'])
+                        find_and_click(IMAGES['return_raid'], optional=True, log_widget=log_widget) #making this optional because the post battle sometimes false positive the return button as ok button
                         continue
 
                     elif IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
@@ -208,7 +208,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                         combat_sequence(IMAGES, log_widget=log_widget, host_raid=True)
                         
                         # find_and_click_text(['Return'], log_widget=log_widget)
-                        find_and_click(IMAGES['return_raid'])
+                        find_and_click(IMAGES['return_raid'], optional=True, log_widget=log_widget) #making this optional because the post battle sometimes false positive the return button as ok button
                         continue
 
                 else:
@@ -250,8 +250,6 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                     confidence = 0.85
 
                 if find_and_click_all(raid_image, confidence=confidence, log_widget=log_widget) is True:
-                    check_stamina(IMAGES, log_widget=log_widget)
-
                     if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
                         find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True, timeout=2.0)
                     else:

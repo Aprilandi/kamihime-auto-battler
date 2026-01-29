@@ -68,11 +68,15 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
                     log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
                     # find_and_click(IMAGES['cancel'], log_widget=log_widget)
                     find_and_click(IMAGES['cancel'], log_widget=log_widget)
-                    break
+                    continue
                 else:
                     log_msg("Rescue is disabled or doesn't exist - returning to quest list", log_widget)
-                    find_and_click(IMAGES['quest_list'], log_widget=log_widget)
-                    return False
+                    # this is to make sure return to quest list is exist
+                    # because there is a chance that the raid is ended just after player died
+                    # so that it wont stuck looking for return to quest list button
+                    wait(log_widget=log_widget)
+                    if find_and_click(IMAGES['quest_list'], log_widget=log_widget, optional=True, robust=False):
+                        return False
             break
         
         if IMAGES.get("return") and pyautogui.locateOnScreen(IMAGES["return"], confidence=CONFIDENCE):
@@ -86,20 +90,18 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
         if IMAGES.get("return_raid") and pyautogui.locateOnScreen(IMAGES["return_raid"], confidence=CONFIDENCE):
             log_msg("Battle ended - Return Raid button found", log_widget)
             break
-
-        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) \
-            and not find_text(['sec left', 'sec', 'left', 'min', 'minute', 'requet', 'request', 'continue'], log_widget=log_widget):
-            log_msg("Battle ended - Ok button found", log_widget)
-            if is_raid is True:
-                find_and_click(IMAGES['ok'], log_widget=log_widget)
-            break
-        elif IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) \
-            and find_text(['subjugation?'], log_widget=log_widget):
-            log_msg("Rescue available, completing...", log_widget)
-            find_and_click(IMAGES['ok'], log_widget=log_widget, robust=False)
-            while pyautogui.locateOnScreen(IMAGES["ok"], confidence=0.95) and find_text(['subjugation?'], log_widget=log_widget):
-                time.sleep(SLEEP)
         
+        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
+            log_msg("Found OK button, determining what to do next", log_widget=log_widget)
+            if find_text(['subjugation?'], log_widget=log_widget):
+                log_msg("Rescue available, completing...", log_widget)
+                find_and_click(IMAGES['ok'], log_widget=log_widget, robust=False, optional=True)
+            elif find_text(['sec left', 'sec', 'left', 'requet', 'request', 'continue'], log_widget=log_widget) is False:
+                log_msg("Battle ended - Ok button found", log_widget)
+                if is_raid is True:
+                    find_and_click(IMAGES['ok'], log_widget=log_widget)
+                break
+
         if (time.time() - start_time) >= timeout:
             log_msg("Probably connection lost, reloading...", log_widget)
             if find_and_click(IMAGES['reload'], log_widget=log_widget):
@@ -126,23 +128,6 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
 
     return True
 
-def check_stamina(IMAGES, log_widget=None, timeout=1.5):
-    start_time = time.time()
-
-    while state.get("running", False):
-
-        elapsed = time.time() - start_time 
-        if elapsed >= timeout:
-            log_msg("Stamina or BP is still sufficient", log_widget)
-            return False
-
-        if (IMAGES.get('stamina_check') and pyautogui.locateOnScreen(IMAGES['stamina_check'], confidence=CONFIDENCE)) or (IMAGES.get('bp_check') and pyautogui.locateOnScreen(IMAGES['bp_check'], confidence=CONFIDENCE)):
-            log_msg("Stamina or BP low detected", log_widget)
-            if find_and_click(IMAGES['stamina_use'], log_widget=log_widget) is True:
-                find_and_click(IMAGES['ok'], log_widget=log_widget)
-                return True
-
-        time.sleep(SLEEP)
         
 def ongoing_battle(IMAGES, log_widget=None, timeout=1.5):
     start_time = time.time()

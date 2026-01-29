@@ -5,6 +5,7 @@ from config import CONFIDENCE, IMAGES, SLEEP, CONNECTING, resource_path
 from PIL import Image
 import pytesseract
 import re
+import logging
 
 # Path relative to your project
 pytesseract.pytesseract.tesseract_cmd = resource_path(
@@ -17,6 +18,12 @@ state = {"running": False, "raid_settings": {}, "completed_raids": {}}
 CONFIDENCE = 0.8
 SLEEP = 1.0
 
+# Configure logging once at the start of your program
+logging.basicConfig(
+    level=logging.DEBUG,  # change to DEBUG if you want more detail
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("debug.log")]
+)
 
 def log_msg(message, log_widget=None):
     """Write a message to the UI log if provided."""
@@ -164,29 +171,40 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
         
         if is_busy is None:
             log_msg(f"Found available raid at {raid_box.left}, {raid_box.top}. Clicking...", log_widget)
+            wait(log_widget=log_widget)
             # Click the center of the available raid
             pyautogui.click(pyautogui.center(raid_box))
-            if find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True, confidence=0.99) is True:
-                log_msg("Only 3 raid battle at once allowed. Waiting...", log_widget)
-                return False
-            if find_and_click(IMAGES['batch'], log_widget=log_widget, optional=True):
-                log_msg("Completing batch raid...", log_widget)
+            while state.get('running', False):
+                
+                check_stamina(IMAGES, log_widget=log_widget, timeout=0.5)
+                
+                if find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True, confidence=0.99) is True:
+                    log_msg("Only 3 raid battle at once allowed. Waiting...", log_widget)
+                    return False
 
-                wait(log_widget=log_widget)
+                if find_and_click(IMAGES['batch'], log_widget=log_widget, optional=True):
+                    log_msg("Completing batch raid...", log_widget)
 
-                # for in case of rank up
-                find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
-                pyautogui.click(pyautogui.center(raid_box))
-            if pyautogui.locateOnScreen(IMAGES['cancel'], confidence=CONFIDENCE) \
-                and not pyautogui.locateOnScreen(IMAGES['stamina_use'], confidence=CONFIDENCE) \
-                and not pyautogui.locateOnScreen(IMAGES['batch'], confidence=CONFIDENCE):
-                find_and_click(IMAGES['cancel'], log_widget=log_widget)
-                find_and_click(IMAGES['ok'], log_widget=log_widget)
-                find_and_click(IMAGES['start_game'], log_widget=log_widget)
-                find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget)
-                return False
+                    wait(log_widget=log_widget)
 
-            return True
+                    # for in case of rank up
+                    find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
+                    pyautogui.click(pyautogui.center(raid_box))
+
+                if pyautogui.locateOnScreen(IMAGES['cancel'], confidence=CONFIDENCE) \
+                    and find_text(['an error'], log_widget=log_widget) is True \
+                    and not pyautogui.locateOnScreen(IMAGES['stamina_use'], confidence=CONFIDENCE) \
+                    and not pyautogui.locateOnScreen(IMAGES['batch'], confidence=CONFIDENCE):
+                    find_and_click(IMAGES['cancel'], log_widget=log_widget)
+                    find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True)
+                    find_and_click(IMAGES['start_game'], log_widget=log_widget, optional=True)
+                    find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget)
+                    return False
+
+                if pyautogui.locateOnScreen(IMAGES['support'], confidence=CONFIDENCE):
+                    return True
+
+                time.sleep(SLEEP)
         else:
             log_msg("Raid found, but it is already 'In Battle'. Skipping...", log_widget)
 
@@ -259,7 +277,7 @@ def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None):
         time.sleep(SLEEP)
         
         
-def wait(timeout=5.0, sleep=0.1, log_widget=None, attempts=4):
+def wait(timeout=3.0, sleep=0.1, log_widget=None, attempts=2):
     time.sleep(SLEEP)
     misses = 0
     start_time = time.time()
@@ -283,6 +301,25 @@ def wait(timeout=5.0, sleep=0.1, log_widget=None, attempts=4):
             return
 
         time.sleep(sleep)
+
+
+def check_stamina(IMAGES, log_widget=None, timeout=1.5):
+    start_time = time.time()
+
+    while state.get("running", False):
+
+        elapsed = time.time() - start_time 
+        if elapsed >= timeout:
+            log_msg("Stamina or BP is still sufficient", log_widget)
+            return False
+
+        if (IMAGES.get('stamina_check') and pyautogui.locateOnScreen(IMAGES['stamina_check'], confidence=CONFIDENCE)) or (IMAGES.get('bp_check') and pyautogui.locateOnScreen(IMAGES['bp_check'], confidence=CONFIDENCE)):
+            log_msg("Stamina or BP low detected", log_widget)
+            if find_and_click(IMAGES['stamina_use'], log_widget=log_widget) is True:
+                find_and_click(IMAGES['ok'], log_widget=log_widget)
+                return True
+
+        time.sleep(SLEEP)
 
 
 def test_function(texts, timeout=1.0, optional=False, log_widget=None):

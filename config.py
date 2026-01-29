@@ -16,9 +16,64 @@ PREFS_FILENAME = "raid_prefs.json"
 pyautogui.useImageNotFoundException(False)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def get_img(name): 
-    # This joins'images' + 'filename.png'
-    return resource_path(os.path.join("images", "1920x1080", f"{name}.png"))
+# Image folders root (inside project) and selected folder name. The default
+# folder matches the shipped templates; users can add other folders (e.g.
+# '1080x920') and the UI will detect them.
+IMAGES_ROOT = resource_path("images")
+SELECTED_IMAGE_FOLDER = "1920x1080"
+
+
+def list_image_folders():
+    """Return a sorted list of subfolder names inside the images/ folder.
+
+    These folder names are intended to be resolution identifiers (e.g.
+    '1920x1080')."""
+    try:
+        names = [n for n in os.listdir(IMAGES_ROOT) if os.path.isdir(os.path.join(IMAGES_ROOT, n))]
+        return sorted(names)
+    except Exception:
+        return [SELECTED_IMAGE_FOLDER]
+
+
+def get_img(name):
+    """Return the full path to an image in the currently selected image folder.
+
+    The selected folder is controlled by `SELECTED_IMAGE_FOLDER` and can be
+    changed at runtime by calling `set_image_folder(folder)`.
+    """
+    return resource_path(os.path.join("images", SELECTED_IMAGE_FOLDER, f"{name}.png"))
+
+
+def set_image_folder(folder_name):
+    """Set the active image folder and rebuild the IMAGES mapping used by the
+    rest of the program. Returns True on success.
+    """
+    global SELECTED_IMAGE_FOLDER, IMAGES, CONNECTING
+    try:
+        # basic validation
+        target = os.path.join(IMAGES_ROOT, folder_name)
+        if not os.path.isdir(target):
+            return False
+        SELECTED_IMAGE_FOLDER = folder_name
+        # rebuild IMAGES mapping so callers using config.IMAGES see updated paths
+        if 'IMAGES' in globals() and isinstance(IMAGES, dict):
+            new_imgs = {}
+            for k, v in IMAGES.items():
+                try:
+                    # v is a previously-built path like '.../KHR_skip.png'
+                    base = os.path.splitext(os.path.basename(v))[0]
+                    new_imgs[k] = get_img(base)
+                except Exception:
+                    # fallback: try using the key name
+                    new_imgs[k] = get_img(k)
+            IMAGES = new_imgs
+        else:
+            IMAGES = {}
+        # update CONNECTING if present
+        CONNECTING = get_img('KHR_connecting')
+        return True
+    except Exception:
+        return False
 
 CONFIDENCE = 0.8
 SLEEP = 0.5
@@ -27,6 +82,19 @@ SLEEP = 0.5
 ELEMENTS = ["fire", "water", "wind", "thunder", "light", "dark", "phantom"]
 DIFFICULTIES = ["malicious", "guardian_plus", "guardian", "ragnarok", "ultimate", "expert", "standard"]
 CONNECTING = get_img('KHR_connecting')
+
+# Per-element difficulty lists. Most elements use the shared DIFFICULTIES list,
+# but some (like 'phantom') have a different naming/ordering for difficulties.
+# Feel free to edit PHANTOM_DIFFICULTIES to match your game.
+# Phantom difficulties currently only include these three names. Do not
+# automatically append the regular DIFFICULTIES list — phantom has a different
+# naming set that should be kept separate.
+PHANTOM_DIFFICULTIES = ["jester", "och_plus", "och"]
+
+ELEMENT_DIFFICULTIES = {
+    el: (PHANTOM_DIFFICULTIES if el == 'phantom' else DIFFICULTIES)
+    for el in ELEMENTS
+}
 
 IMAGES = {
     "story_start": get_img('KHR_gems(start)'),
@@ -106,6 +174,8 @@ def save_prefs(state_dict):
             'completed_raids': state_dict.get('completed_raids', {}),
             'max_runs': state_dict.get('max_runs', {}),
             'rescue': state_dict.get('rescue', True),
+            # optional UI prefs
+            'image_folder': state_dict.get('image_folder'),
         }
         with open(PREFS_PATH, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)

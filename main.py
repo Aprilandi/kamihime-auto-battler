@@ -3,16 +3,25 @@ import threading, logic, os, keyboard, config
 
 # Use configuration module (single source of truth for images and lists)
 ELEMENTS = config.ELEMENTS
+# Use per-element difficulties mapping when available (phantom differs)
+ELEMENT_DIFFICULTIES = getattr(config, 'ELEMENT_DIFFICULTIES', {el: config.DIFFICULTIES for el in ELEMENTS})
 DIFFICULTIES = config.DIFFICULTIES
-IMAGES = config.IMAGES
+
+# Images mapping will be built from the selected image folder. We start with
+# the folder persisted in prefs (if any) or fall back to the default that
+# shipped with the repo.
+IMAGES = dict(config.IMAGES)
+# local get_img will be replaced once we build the selected-folder wrapper
 get_img = config.get_img
 
 # Initialize State with defaults; override from persisted prefs when available
-default_raid_settings = {
-    el: {"enable": True, "difficulty": {d: True for d in DIFFICULTIES}}
-    for el in ELEMENTS
-}
-default_completed = {el: {d: 0 for d in DIFFICULTIES} for el in ELEMENTS}
+default_raid_settings = {}
+default_completed = {}
+for el in ELEMENTS:
+    diffs = ELEMENT_DIFFICULTIES.get(el, config.DIFFICULTIES)
+    default_raid_settings[el] = {"enable": True, "difficulty": {d: True for d in diffs}}
+    default_completed[el] = {d: 0 for d in diffs}
+
 default_max_runs = {el: (2 if el == "phantom" else 1) for el in ELEMENTS}
 
 logic.state["raid_settings"] = default_raid_settings
@@ -43,17 +52,22 @@ try:
         # accidental string types from external edits.
         persisted = prefs.get("completed_raids", {}) or {}
         for el in ELEMENTS:
-            for d in DIFFICULTIES:
+            diffs = ELEMENT_DIFFICULTIES.get(el, config.DIFFICULTIES)
+            for d in diffs:
                 try:
-                    val = persisted.get(el, {}).get(d, default_completed[el][d])
+                    val = persisted.get(el, {}).get(d, default_completed[el].get(d, 0))
                     logic.state["completed_raids"][el][d] = int(val)
                 except Exception:
                     # if casting fails, fallback to the default
-                    logic.state["completed_raids"][el][d] = default_completed[el][d]
+                    logic.state["completed_raids"][el][d] = default_completed[el].get(d, 0)
     if prefs.get("max_runs"):
         logic.state["max_runs"].update(prefs.get("max_runs", {}))
     if "rescue" in prefs:
         logic.state["rescue"] = bool(prefs.get("rescue"))
+    # selected image folder (optional)
+    sel_img_folder = prefs.get('image_folder')
+    if sel_img_folder:
+        logic.state['image_folder'] = sel_img_folder
 except Exception:
     # ignore prefs errors and continue with defaults
     pass
@@ -118,7 +132,8 @@ def stop_bot():
 
 def reset_list():
     for el in ELEMENTS:
-        for d in DIFFICULTIES:
+        diffs = ELEMENT_DIFFICULTIES.get(el, config.DIFFICULTIES)
+        for d in diffs:
             logic.state["completed_raids"][el][d] = 0
     # also reset loop counters
     if "loop_counts" in logic.state:
@@ -137,11 +152,60 @@ keyboard.add_hotkey('f7', stop_bot)
 # --- UI Setup ---
 app = ctk.CTk()
 app.title("K-Bot")
-app.geometry("280x700")
+app.geometry("280x800")
 app.attributes("-topmost", True)
 
 status_lbl = ctk.CTkLabel(app, text="IDLE", font=("Arial", 12, "bold"))
 status_lbl.pack(pady=5)
+
+# Image resolution selector (detect subfolders inside the images/ directory)
+folders = config.list_image_folders()
+
+# if a persisted folder exists in prefs (or logic.state) apply it to config
+if logic.state.get('image_folder'):
+    try:
+        config.set_image_folder(logic.state.get('image_folder'))
+    except Exception:
+        pass
+
+# apply initial mapping from config (config.IMAGES is rebuilt by set_image_folder)
+IMAGES = dict(getattr(config, 'IMAGES', {}))
+get_img = config.get_img
+
+# selected image folder for the UI dropdown
+selected_image_folder = getattr(config, 'SELECTED_IMAGE_FOLDER', (folders[0] if folders else "1920x1080"))
+
+def _on_image_folder_change(new):
+    # update config's selected image folder and persist
+    global IMAGES, get_img, selected_image_folder
+    if config.set_image_folder(new):
+        IMAGES = dict(getattr(config, 'IMAGES', {}))
+        get_img = config.get_img
+        selected_image_folder = new
+        logic.state['image_folder'] = selected_image_folder
+        try:
+            config.save_prefs(logic.state)
+        except Exception:
+            pass
+        # UI log feedback for image folder change
+        try:
+            msg = "> Image folder set to " + str(new) + "\n"
+            log.insert("end", msg)
+            log.see("end")
+        except Exception:
+            pass
+        # persisted image folder updated
+
+if folders:
+    res_frame = ctk.CTkFrame(app)
+    res_frame.pack(fill="x", padx=10, pady=(0,6))
+    ctk.CTkLabel(res_frame, text="Images:", anchor="w").pack(side="left", padx=(0,8))
+    res_menu = ctk.CTkOptionMenu(res_frame, values=folders, command=_on_image_folder_change)
+    try:
+        res_menu.set(selected_image_folder)
+    except Exception:
+        pass
+    res_menu.pack(side="left")
 
 # Control Buttons
 ctrl_frame = ctk.CTkFrame(app)
@@ -166,26 +230,6 @@ btn_tower.grid(row=2, column=0, padx=2, pady=2)
 btn_episode = ctk.CTkButton(mode_frame, text="Episode Rush", width=120, command=lambda: start_mode(logic.episode_rush, "episode_rush", IMAGES, log))
 btn_episode.grid(row=2, column=1, padx=2, pady=2)
 
-# Loop counters display
-counter_frame = ctk.CTkFrame(app)
-counter_frame.pack(fill="x", padx=10, pady=(0, 6))
-farm_count_lbl = ctk.CTkLabel(counter_frame, text="Farm: 0", anchor="w")
-farm_count_lbl.pack(side="left", padx=6)
-epic_count_lbl = ctk.CTkLabel(counter_frame, text="Epic: 0", anchor="w")
-epic_count_lbl.pack(side="left", padx=6)
-raid_count_lbl = ctk.CTkLabel(counter_frame, text="Raid: 0", anchor="w")
-raid_count_lbl.pack(side="left", padx=6)
-
-def _update_loop_counters():
-    counts = logic.state.get("loop_counts", {})
-    farm_count_lbl.configure(text=f"Farm: {counts.get('farm', 0)}")
-    epic_count_lbl.configure(text=f"Epic: {counts.get('epic', 0)}")
-    raid_count_lbl.configure(text=f"Raid: {counts.get('raid', 0)}")
-    # schedule next update
-    try:
-        app.after(1000, _update_loop_counters)
-    except Exception:
-        pass
 
 # RESCUE toggle checkbox (controls logic.state['RESCUE'])
 rescue_var = ctk.BooleanVar(value=logic.state.get("rescue", True))
@@ -200,6 +244,8 @@ scroll.pack(fill="both", expand=True, padx=10, pady=5)
 
 # store child vars so we can sync parent <> children
 element_child_vars = {}
+element_parent_vars = {}
+element_all_btns = {}
 
 for el in ELEMENTS:
     # Parent checkbox for the whole element (persisted under raid_settings[el]['__element_enabled__'])
@@ -221,13 +267,19 @@ for el in ELEMENTS:
                 pass
         return _on_parent
 
-    parent_cb = ctk.CTkCheckBox(scroll, text=el.upper(), font=("Arial", 10, "bold"), variable=parent_var, command=make_parent_cb())
-    parent_cb.pack(anchor="w", padx=6, pady=(6,2))
+    # header row for element: parent checkbox (children are created below)
+    header_row = ctk.CTkFrame(scroll)
+    header_row.pack(fill="x", padx=6, pady=(6,2))
+    parent_cb = ctk.CTkCheckBox(header_row, text=el.upper(), font=("Arial", 10, "bold"), variable=parent_var, command=make_parent_cb())
+    parent_cb.pack(side="left")
+
+    element_parent_vars[el] = parent_var
 
     # prepare list for this element
     element_child_vars[el] = []
 
-    for d in DIFFICULTIES:
+    # iterate per-element difficulty list (phantom has different difficulties)
+    for d in ELEMENT_DIFFICULTIES.get(el, DIFFICULTIES):
         # initialize checkbox state from persisted runtime state
         init_val = logic.state.get("raid_settings", {}).get(el, {}).get("difficulty", {}).get(d, True)
         var = ctk.BooleanVar(value=init_val)
@@ -251,6 +303,178 @@ for el in ELEMENTS:
             cb.select()
         cb.pack(anchor="w", padx=20)
         element_child_vars[el].append((var, d))
+
+    # After children are created, add a toggle-all button for this element that
+    # switches between enabling all difficulties and disabling all.
+    def _toggle_all_for_element(e=el, btn_ref=None):
+        # determine if all currently enabled
+        all_on = all(cv.get() for cv, _ in element_child_vars.get(e, []))
+        new_val = not all_on
+        for cv, diff in element_child_vars.get(e, []):
+            cv.set(new_val)
+            logic.state["raid_settings"][e]["difficulty"][diff] = new_val
+        logic.state["raid_settings"][e]["enable"] = any(cv.get() for cv, _ in element_child_vars.get(e, []))
+        try:
+            element_parent_vars.get(e).set(logic.state["raid_settings"][e]["enable"])
+        except Exception:
+            pass
+        # update button label
+        try:
+            if btn_ref:
+                btn_ref.configure(text=("None" if new_val else "All"))
+        except Exception:
+            pass
+        try:
+            config.save_prefs(logic.state)
+        except Exception:
+            pass
+        # UI log feedback for element toggle
+        try:
+            msg = "> Toggled all difficulties for " + str(e) + ": " + ("enabled" if new_val else "disabled") + "\n"
+            log.insert("end", msg)
+            log.see("end")
+        except Exception:
+            pass
+
+    all_btn = ctk.CTkButton(header_row, text="All", width=44, height=20)
+    # bind command later with a reference to the button so it can update text
+    all_btn.configure(command=lambda e=el, b=all_btn: _toggle_all_for_element(e, b))
+    # set initial label to 'None' if all already enabled
+    try:
+        if all(cv.get() for cv, _ in element_child_vars.get(el, [])):
+            all_btn.configure(text="None")
+    except Exception:
+        pass
+    all_btn.pack(side="left", padx=(6,0))
+    # remember the button so global actions can update its label
+    element_all_btns[el] = all_btn
+
+    # Global helpers to enable/disable sets of options
+def enable_all_elements():
+    for el in ELEMENTS:
+        logic.state["raid_settings"][el]["enable"] = True
+        try:
+            element_parent_vars.get(el).set(True)
+        except Exception:
+            pass
+    try:
+        config.save_prefs(logic.state)
+    except Exception:
+        pass
+
+# Controls under Raid Config: global toggles and "enable specific difficulty for all elements"
+controls_frame = ctk.CTkFrame(app)
+controls_frame.pack(fill="x", padx=10, pady=(6,8))
+
+def _any_diff_disabled():
+    for el in ELEMENTS:
+        for cv, _ in element_child_vars.get(el, []):
+            if not cv.get():
+                return True
+    return False
+
+def _set_global_all_btn_text(btn):
+    try:
+        if _any_diff_disabled():
+            btn.configure(text="Enable All Diffs")
+        else:
+            btn.configure(text="Disable All Diffs")
+    except Exception:
+        pass
+
+def toggle_all_difficulties(btn=None):
+    enable = _any_diff_disabled()
+    for el in ELEMENTS:
+        # enable/disable every difficulty this element supports
+        for cv, diff in element_child_vars.get(el, []):
+            cv.set(enable)
+            logic.state["raid_settings"][el]["difficulty"][diff] = enable
+        try:
+            element_parent_vars.get(el).set(any(cv.get() for cv, _ in element_child_vars.get(el, [])))
+            logic.state["raid_settings"][el]["enable"] = any(cv.get() for cv, _ in element_child_vars.get(el, []))
+        except Exception:
+            pass
+
+    # update per-element All button labels
+    for e, btn_ref in element_all_btns.items():
+        try:
+            if all(cv.get() for cv, _ in element_child_vars.get(e, [])):
+                btn_ref.configure(text="None")
+            else:
+                btn_ref.configure(text="All")
+        except Exception:
+            pass
+
+    try:
+        config.save_prefs(logic.state)
+    except Exception:
+        pass
+
+    if btn:
+        _set_global_all_btn_text(btn)
+
+# Global toggle button (placed under Raid Config)
+global_all_btn = ctk.CTkButton(controls_frame, text="", width=160, command=lambda: toggle_all_difficulties(global_all_btn))
+global_all_btn.pack(side="left", padx=(0,8))
+_set_global_all_btn_text(global_all_btn)
+
+# Difficulty selector + action: enable/disable selected difficulty across all elements (skip elements that don't support it)
+# Keep the order defined in DIFFICULTIES so the dropdown is predictable.
+diffs_for_all = [d for d in DIFFICULTIES if any(d in ELEMENT_DIFFICULTIES.get(el, DIFFICULTIES) for el in ELEMENTS if el != 'phantom')]
+if diffs_for_all:
+    # OptionMenu will call toggle_specific_diff when a value is selected.
+    def toggle_specific_diff(selected):
+        sel = selected
+        # if any non-phantom element has this diff disabled, we'll enable it across non-phantom elements
+        # use the correct path into logic.state['raid_settings'] when checking current values
+        should_enable = any(
+            not logic.state.get('raid_settings', {}).get(el, {}).get('difficulty', {}).get(sel, False)
+            for el in ELEMENTS if el != 'phantom'
+        )
+        for el in ELEMENTS:
+            if el == 'phantom':
+                continue
+            # if this element doesn't have that difficulty, skip
+            if sel not in [d for _, d in element_child_vars.get(el, [])]:
+                continue
+            # find the checkbox var and set it
+            for cv, d in element_child_vars.get(el, []):
+                if d == sel:
+                    cv.set(should_enable)
+                    logic.state["raid_settings"][el]["difficulty"][d] = should_enable
+                    break
+            # update parent
+            try:
+                element_parent_vars.get(el).set(any(cv.get() for cv, _ in element_child_vars.get(el, [])))
+                logic.state["raid_settings"][el]["enable"] = any(cv.get() for cv, _ in element_child_vars.get(el, []))
+            except Exception:
+                pass
+
+        # update per-element All button labels
+        for e, btn_ref in element_all_btns.items():
+            try:
+                if all(cv.get() for cv, _ in element_child_vars.get(e, [])):
+                    btn_ref.configure(text="None")
+                else:
+                    btn_ref.configure(text="All")
+            except Exception:
+                pass
+
+        try:
+            config.save_prefs(logic.state)
+        except Exception:
+            pass
+
+    diff_menu = ctk.CTkOptionMenu(controls_frame, values=diffs_for_all, command=toggle_specific_diff)
+    try:
+        diff_menu.set(diffs_for_all[0])
+    except Exception:
+        pass
+    diff_menu.pack(side="left", padx=(0,8))
+
+    # keep a small apply button in case user prefers clicking it
+    diff_apply_btn = ctk.CTkButton(controls_frame, text="Apply Diff To All", width=160, command=lambda: toggle_specific_diff(diff_menu.get()))
+    diff_apply_btn.pack(side="left")
 
 log = ctk.CTkTextbox(app, height=100, font=("Arial", 10))
 log.pack(fill="x", padx=10, pady=5)

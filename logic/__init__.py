@@ -10,9 +10,11 @@ from .core import (
     prevent_sleep,
     allow_sleep,
     find_and_click_all,
-    find_text
+    find_text,
+    check_stamina,
+    wait
 )
-from .battle import combat_sequence, wait_for_battle_end, check_stamina, ongoing_battle
+from .battle import combat_sequence, wait_for_battle_end, ongoing_battle
 from .flows import farm_loop, quest_rush, raid_host, episode_rush, farm_raid
 
 # Re-export public API for backwards compatibility with existing imports
@@ -40,5 +42,6 @@ __all__ = [
     "quest_rush",
     "raid_host",
     "episode_rush",
-    "farm_raid"
+    "farm_raid",
+    "wait"
 ]
