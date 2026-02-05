@@ -85,7 +85,7 @@ except Exception:
         return False
 
 
-def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None, robust=True):
+def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None, robust=True, offset=0):
     """Find an image on screen and click it.
     """
     if not image:
@@ -108,7 +108,11 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
             log_msg(f"Found {name} (Non Robust), clicking", log_widget) 
             try:
                 time.sleep(SLEEP)
-                pyautogui.click(pyautogui.center(btn))
+                center = pyautogui.center(btn)
+                target_x = center.x
+                target_y = center.y + offset
+                
+                pyautogui.click(target_x, target_y)
             except Exception:
                 # fallback: click top-left of the located box
                 time.sleep(SLEEP)
@@ -124,7 +128,11 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
 
             try:
                 time.sleep(SLEEP)
-                pyautogui.click(pyautogui.center(btn))
+                center = pyautogui.center(btn)
+                target_x = center.x
+                target_y = center.y + offset
+                
+                pyautogui.click(target_x, target_y)
             except Exception:
                 time.sleep(SLEEP)
                 pyautogui.click(btn.left + 5, btn.top + 5)
@@ -148,8 +156,13 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
 
 
 def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None):
-    log_msg("Searching for available raids...", log_widget)
-    
+    try:
+        name = os.path.basename(image)
+    except Exception:
+        name = str(image)
+        
+    log_msg(f"Searching for {name}", log_widget)
+
     # 1. Find all instances of the raid banner
     # grayscale=True and confidence help with speed and slight color variations
     all_raids = list(pyautogui.locateAllOnScreen(image, confidence=confidence))
@@ -215,13 +228,15 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
 def post_battle(IMAGES, timeout=5.0, confidence=CONFIDENCE, log_widget=None):
     ok = IMAGES.get("ok")
     start_time = time.time()
+    isOk = False
 
     while state.get("running", False):
-        if (time.time() - start_time) >= timeout:
+        if find_and_click(ok, confidence=confidence, optional=True, timeout=1.0, log_widget=log_widget):
+            start_time = time.time()
+            isOk = True
+
+        elif (time.time() - start_time) >= timeout or isOk:
             return True
-        else:
-            if find_and_click(ok, confidence=confidence, optional=True, timeout=1.0, log_widget=log_widget):
-                start_time = time.time()
             
         time.sleep(SLEEP)
         

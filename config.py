@@ -89,12 +89,14 @@ CONNECTING = get_img('KHR_connecting')
 # Phantom difficulties currently only include these three names. Do not
 # automatically append the regular DIFFICULTIES list — phantom has a different
 # naming set that should be kept separate.
-PHANTOM_DIFFICULTIES = ["jester", "och_plus", "och"]
+PHANTOM_DIFFICULTIES = ["loki", "och_plus", "och"]
 
 ELEMENT_DIFFICULTIES = {
     el: (PHANTOM_DIFFICULTIES if el == 'phantom' else DIFFICULTIES)
     for el in ELEMENTS
 }
+
+ALL_POSSIBLE_DIFFS = DIFFICULTIES + PHANTOM_DIFFICULTIES
 
 IMAGES = {
     "story_start": get_img('KHR_gems(start)'),
@@ -140,7 +142,12 @@ IMAGES = {
     "raid_event": get_img('KHR_raid_event'),
     "raid_regular": get_img('KHR_raid_regular'),
     "unconfirmed_battles": get_img('KHR_unconfirmed_battles'),
-    "start_game": get_img("KHR_start_game")
+    "start_game": get_img("KHR_start_game"),
+    "support_btn": get_img("KHR_support_btn"),
+    "go": get_img("KHR_go"),
+    "new_world": get_img("KHR_new_world"),
+    "next_page": get_img("KHR_next_page"),
+    "next_episode": get_img("KHR_next_episode")
 }
 
 

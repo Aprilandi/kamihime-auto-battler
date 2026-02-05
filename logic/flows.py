@@ -1,8 +1,8 @@
 import time
 import pyautogui
-from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina
+from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina, post_battle
 from .battle import combat_sequence, ongoing_battle
-from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES
+from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES, ALL_POSSIBLE_DIFFS
 
 def farm_loop(IMAGES, log_widget=None):
     """Main farming loop to run battles continuously.
@@ -11,17 +11,61 @@ def farm_loop(IMAGES, log_widget=None):
     log_msg("Starting farming loop", log_widget)
     while state.get("running", False):
         if find_and_click(IMAGES.get('retry'), log_widget=log_widget, robust=False):
-            loop_count = _inc_loop("farm_loop", log_widget)
 
             check_stamina(IMAGES, log_widget=log_widget)
             find_and_click(IMAGES['challenge'], log_widget=log_widget, timeout=0.5, optional=True)
 
-            combat_sequence(IMAGES, log_widget)
+            combat_sequence(IMAGES, log_widget, is_raid=True)
+            
         
         time.sleep(SLEEP)
 
-
 def quest_rush(IMAGES, log_widget=None):
+    """Quest Rush mode farming loop.
+    """
+    log_msg("Starting Quest Rush mode", log_widget)
+    while state.get("running",  False):
+        if find_and_click(IMAGES['story_start'], log_widget=log_widget, timeout=5.0, optional=True, robust=False):
+            new_chapter = False
+            find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget)
+            check_stamina(IMAGES, log_widget=log_widget)
+            while state.get("running", False):
+                # main loop inside the episode
+                if find_and_click(IMAGES['support'], log_widget=log_widget, optional=True, robust=False):
+                    find_and_click(IMAGES['go_quest'], log_widget=log_widget)
+                if find_and_click(IMAGES['skip'], log_widget=log_widget, robust=False, optional=True):
+                    find_and_click(IMAGES['skip_confirm'], log_widget=log_widget)
+                if find_and_click(IMAGES['ep_skip'], log_widget=log_widget, optional=True, robust=False):
+                    find_and_click(IMAGES['ok'], log_widget=log_widget)
+
+                find_and_click(IMAGES['attack'], log_widget=log_widget, optional=True)
+                
+                # indicator when that episode is finished
+                if find_and_click(IMAGES['next_episode'], log_widget=log_widget, optional=True, robust=False):
+                    # find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget)
+                    check_stamina(IMAGES, log_widget=log_widget)
+                    
+                    # check if the chapter is finised
+                    if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
+                        find_and_click(IMAGES['ok'], log_widget=log_widget)
+                        new_chapter = True
+                        
+                        # check if the world is finished
+                        if pyautogui.locateOnScreen(IMAGES['next_page'], confidence=CONFIDENCE):
+                            OFFSET = -120 # for 1920x1080 resolution currently (negative = above ; positive = below)
+                            find_and_click(IMAGES['new_world'], log_widget=log_widget, offset=OFFSET, robust=False)
+                            find_and_click(IMAGES['go'], log_widget=log_widget)
+                            find_and_click(IMAGES['ok'], log_widget=log_widget)
+
+                        break
+                    continue
+
+            if new_chapter:
+                continue
+
+
+
+def epic_quest_rush(IMAGES, log_widget=None):
     """Epic Quest Rush mode farming loop.
     """
     log_msg("Starting Epic Quest Rush mode", log_widget)
@@ -105,7 +149,7 @@ def episode_rush(IMAGES, log_widget=None):
             find_and_click(IMAGES['skip_confirm'], log_widget=log_widget)
             
             if branch:
-                find_and_click(IMAGES['ep_skip'], log_widget=log_widget)
+                find_and_click(IMAGES['ep_skip'], log_widget=log_widget, robust=False)
                 
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
                 
@@ -222,7 +266,7 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
         # This scans all elements for a given difficulty before moving to the next
         # difficulty which can be useful when farming a specific difficulty across
         # elements.
-        for difficulty in DIFFICULTIES:
+        for difficulty in ALL_POSSIBLE_DIFFS:
             for index, element in enumerate(ELEMENTS):
                 defeat = False
                 if not state.get("running", False):

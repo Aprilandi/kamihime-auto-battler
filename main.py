@@ -78,6 +78,7 @@ def _set_mode_buttons_state(state_value):
     try:
         btn_raid.configure(state=state_value)
         btn_epic.configure(state=state_value)
+        btn_quest.configure(state=state_value)
         btn_retry.configure(state=state_value)
         btn_episode.configure(state=state_value)
         btn_raid_farm.configure(state=state_value)
@@ -221,15 +222,17 @@ btn_raid = ctk.CTkButton(mode_frame, text="Raid Host", width=120, command=lambda
 btn_raid.grid(row=0, column=0, padx=2, pady=2)
 btn_raid_farm = ctk.CTkButton(mode_frame, text="Farm Raid", width=120, command=lambda: start_mode(logic.farm_raid, "farm_raid", IMAGES, ELEMENTS, get_img, log))
 btn_raid_farm.grid(row=0, column=1, padx=2, pady=2)
-btn_retry = ctk.CTkButton(mode_frame, text="Retry Farm", width=120, command=lambda: start_mode(logic.farm_loop, "farm_loop", IMAGES, log))
-btn_retry.grid(row=1, column=0, padx=2, pady=2)
-btn_epic = ctk.CTkButton(mode_frame, text="Epic Quest Rush", width=120, command=lambda: start_mode(logic.quest_rush, "quest_rush", IMAGES, log))
+btn_quest = ctk.CTkButton(mode_frame, text="Quest Rush", width=120, command=lambda: start_mode(logic.quest_rush, "quest_rush", IMAGES, log))
+btn_quest.grid(row=1, column=0, padx=2, pady=2)
+btn_epic = ctk.CTkButton(mode_frame, text="Epic Quest Rush", width=120, command=lambda: start_mode(logic.quest_rush, "epic_quest_rush", IMAGES, log))
 btn_epic.grid(row=1, column=1, padx=2, pady=2)
 # scrap this function
 # btn_tower = ctk.CTkButton(mode_frame, text="Tower Farm", width=120, state="disabled")
 # btn_tower.grid(row=2, column=0, padx=2, pady=2)
+btn_retry = ctk.CTkButton(mode_frame, text="Retry Farm", width=120, command=lambda: start_mode(logic.farm_loop, "farm_loop", IMAGES, log))
+btn_retry.grid(row=2, column=0, padx=2, pady=2)
 btn_episode = ctk.CTkButton(mode_frame, text="Episode Rush", width=120, command=lambda: start_mode(logic.episode_rush, "episode_rush", IMAGES, log))
-btn_episode.grid(row=2, column=0, padx=2, pady=2)
+btn_episode.grid(row=2, column=1, padx=2, pady=2)
 
 
 # RESCUE toggle checkbox (controls logic.state['RESCUE'])
