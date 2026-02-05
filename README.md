@@ -1,9 +1,9 @@
 
 # K-Bot — Kamihime Auto-battler
 
-A simple GUI bot that automates quests and raids for Kamihime Project R. This README explains how to set up and run the program on Windows (PowerShell), aimed at users without a programming background.
+A simple GUI bot that automates quests and raids for Kamihime Project R. This bot currently only optimized for screen resolution 1920x1080 with 100% display scaling and browser setting NO ZOOM (Zoom in nor Zoom out). If you have different screen resolution this README explains how to set up, modify, and run the program on Windows (PowerShell), aimed at users without a programming background.
 
-IMPORTANT: This tool controls your mouse and keyboard. Only run it when you can safely let the program take over input. Use the STOP button or press F7 to stop the bot immediately.
+IMPORTANT: This tool controls your mouse and keyboard. Only run it when you can safely let the program take over input. Use the STOP button or press F7 (may need multiple times) to stop the bot immediately.
 
 ---
 
@@ -13,10 +13,39 @@ Get the latest Windows build from GitHub Releases:
 
 👉 [Download K-Bot for Windows](https://github.com/Aprilandi/kamihime-auto-battler/releases/latest)
 
-- Note: Currently optimized for 1920x1080 with 100% display scaling and game setting NO ZOOM (Zoom in nor Zoom out).
-- If your resolution differs, add matching images under `images/<your-resolution>/` and rebuild using the provided PyInstaller command (or `main.spec`).
+- Note: Currently optimized for 1920x1080 with 100% display scaling and browser setting NO ZOOM (Zoom in nor Zoom out).
+- If your resolution differs, add matching images under `images/<your-resolution>/` and rebuild, follow the steps after `Quick overview (non-technical)`.
 
-## How to build your own (if you want to modify images)
+---
+
+## Quick overview (non-technical)
+- Button `Raid Host` is used for starting raid quests, starting point for this is at `Raid Quests` under `Fire Element` on the `First Page` always even if you did not check any `Fire Raid Quests` always open the `Fire Element First Page`.
+- Button `Farm Raid` is used for auto joining selected raids, starting point for this is at `Raid Boss Available!`.
+- Button `Quest Rush` is used for starting `Main Quest`, starting point this is when the `Magic Jewel` on screen.
+- Button `Epic Quest Rush` is used for starting the `Epic Quest`, starting point for this is the same with `Quest Rush` but for `Epic Quest`.
+- Button `Retry Farm` is used for starting the same quest over and over again until you stop the bot, starting point for this is when the `Retry` button available (after you completed the quest or on the summary of the battle page).
+- Button `Episode Rush` is used for auto completing all of the unread harem episode, starting point for this is in `Episode` where the `Exclamation Mark` exists (turn on filter `Episode Unread` for much faster automation).
+- To stop the bot: press the big `STOP (F7)` button or press F7 on your keyboard.
+- To reset progress counters: press `RESET`.
+
+---
+## This step is for when you modify the code or you have different resolution and added your own images
+### What you need (prerequisites)
+- Windows machine
+- Python 3.8+ installed and available in your PATH (type `python --version` in PowerShell to check)
+- The `images/` folder in this project must remain in the repository — it contains the screenshot templates the bot uses to find buttons. Do not remove it if you expect the bot to work.
+
+Important: resolution and image templates
+- This bot is designed to work with a 1920x1080 display resolution and Windows display scaling set to 100% (no zoom). The image templates in `images/` were captured at 1920x1080 — if your game runs at a different resolution or scaling the template matching will likely fail.
+- If you run the game at a different resoultion, add a new folder named from your resolution under folder `images/`.
+- Retake all screenshots from `images/1920x1080` from your screen with the exact same name and filetype (.PNG), and save it under your resolution folder.
+- After you are done retaking all images from `images/1920x1080` into your own resolution folder `images/<your resolution>`, rebuild the code.
+
+If you're unsure about Python, follow the step-by-step instructions below.
+
+---
+
+### How to build your own (if you want to modify or add images)
 
 1. **Install dependencies**
    ```powershell
@@ -26,80 +55,11 @@ Get the latest Windows build from GitHub Releases:
    ```powershell
    pyinstaller main.spec
 
----
-
-## Quick overview (non-technical)
-- Double-click `main.py` (or run a single command in PowerShell) to open the small K-Bot window.
-- Click one of the mode buttons to start: `Raid Rot`, `Epic Rush`, or `Retry Farm`.
-- While a bot mode is running the other mode buttons will be disabled (so only one runs at a time).
-- Watch the log box for messages that describe what the bot is doing.
-- The loop counters (Farm / Epic / Raid) are shown near the top and update while the bot runs.
-- To stop the bot: press the big `STOP (F7)` button or press F7 on your keyboard.
-- To reset progress counters: press `RESET`.
-
----
-
-## What you need (prerequisites)
-- Windows machine
-- Python 3.8+ installed and available in your PATH (type `python --version` in PowerShell to check)
-- The `images/` folder in this project must remain in the repository — it contains the screenshot templates the bot uses to find buttons. Do not remove it if you expect the bot to work.
-
-Important: resolution and image templates
-- This bot is designed to work with a 1920x1080 display resolution and Windows display scaling set to 100% (no zoom). The image templates in `images/` were captured at 1920x1080 — if your game runs at a different resolution or scaling the template matching will likely fail.
-- If you run the game at a different resolution, retake the screenshots from your screen so they match exactly. To keep the repository tidy, move the old screenshots into a subfolder `images/old/` and save the new PNGs in `images/` using the same filenames. The bot expects the filenames in `images/` to match the keys in `config.IMAGES`.
-- Quick way to replace screenshots: open the `images/` folder, create a new `old/` folder, move the existing PNG files into `images/old/`, then capture new PNGs from your running game and save them into `images/` with the same names.
-
-If you're unsure about Python, follow the step-by-step instructions below.
-
----
-
-## Easy step-by-step install (PowerShell)
-Open PowerShell and run these commands from the project folder (where `main.py` is located). Copy/paste each line and press Enter.
-
-1) Create a virtual environment (keeps dependencies local):
-
-```powershell
-python -m venv .venv
-```
-
-2) Activate it (PowerShell):
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-If PowerShell blocks activation, temporarily allow scripts for this session:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-```
-
-3) Upgrade pip and install required packages:
-
-```powershell
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-4) Run the app:
-
-```powershell
-python main.py
-```
+3. **The exe file location and run it**
+   ```powershell
+   \kamihime-auto-battler\dist
 
 The GUI should open. If you see errors during install, copy the error text and paste it into an issue or message so we can help.
-
----
-
-## Quick usage guide (what each UI item does)
-- `Raid Rot` — cycles through selected raid elements and difficulties, hosting or joining where configured.
-- `Epic Rush` — plays epic quest/story nodes (the bot will skip story when possible and run combat).
-- `Retry Farm` — runs the retry farm loop (retries the quest when the retry prompt appears).
-- `RESCUE` (checkbox) — when checked, the bot will attempt in-game rescue flows; when unchecked, the bot will give up and return to the quest list on death.
-- Loop counters (Farm / Epic / Raid) — show how many iterations have run.
-- `STOP (F7)` — stop any running sequence (hotkey F7 works too).
-- `RESET` — set progress (counters) back to zero.
 
 ---
 
