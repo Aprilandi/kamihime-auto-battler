@@ -30,51 +30,59 @@ Get the latest Windows build from GitHub Releases:
 
 ---
 ## This step is for when you modify the code or you have different resolution and added your own images
+
 ### What you need (prerequisites)
+
 - Windows machine
 - Python 3.8+ installed and available in your PATH (type `python --version` in PowerShell to check)
 - The `images/` folder in this project must remain in the repository — it contains the screenshot templates the bot uses to find buttons. Do not remove it if you expect the bot to work.
 
-Important: resolution and image templates
-- This bot is designed to work with a 1920x1080 display resolution and Windows display scaling set to 100% (no zoom). The image templates in `images/` were captured at 1920x1080 — if your game runs at a different resolution or scaling the template matching will likely fail.
-- If you run the game at a different resoultion, add a new folder named from your resolution under folder `images/`.
-- Retake all screenshots from `images/1920x1080` from your screen with the exact same name and filetype (.PNG), and save it under your resolution folder.
+**Important: resolution and image templates**
+
+- This bot is designed to work with a **1920x1080** display resolution and Windows display scaling set to **100%** (no zoom). The image templates in `images/` were captured at 1920x1080 — if your game runs at a different resolution or scaling the template matching will likely fail.
+- If you run the game at a different resolution, add a new folder named from your resolution under folder `images/`.
+- Retake all screenshots from `images/1920x1080` from your screen with the exact same name and filetype (`.PNG`), and save it under your resolution folder.
 - After you are done retaking all images from `images/1920x1080` into your own resolution folder `images/<your resolution>`, rebuild the code.
 
 If you're unsure about Python, follow the step-by-step instructions below.
 
----
+
 
 ### How to build your own (if you want to modify or add images)
 
 1. **Install dependencies**
    ```powershell
    pip install -r requirements.txt
+   ```
 
 2. **Build the script**
    ```powershell
    pyinstaller main.spec
+   ```
 
 3. **The exe file location and run it**
    ```powershell
-   \kamihime-auto-battler\dist
+   .\kamihime-auto-battler\dist
+   ```
 
 The GUI should open. If you see errors during install, copy the error text and paste it into an issue or message so we can help.
 
 ---
 
 ## Safety & troubleshooting
+
 - The bot clicks the screen. Make sure the game is visible and not obscured by other windows.
 - If the bot appears to do nothing, confirm:
-	- The game window is visible and at the expected resolution.
-	- The `images/` folder is present and intact (PNG files).
-	- The virtual environment is activated and dependencies installed.
-- If image detection fails often, try increasing your screen brightness or run the game at a stable resolution / scaling (100%).
+  - **Ensure** the game window is visible and at the expected resolution.
+  - **Check** the `images/` folder is present and intact (PNG files).
+  - **Activate** the virtual environment and install dependencies.
+- If image detection fails often, try increasing your screen brightness or run the game at a stable resolution / scaling (**100%**).
 - If PowerShell shows permission errors when activating the venv, run the `Set-ExecutionPolicy` line above to allow the script for your session.
 
 ---
 
 ## Want to tweak behavior?
+
 - If you want counters shown in a different place or the bot to count different events, we can adjust it.
 - If detection is flaky we can relax the confidence thresholds or add extra sleeps.
 
