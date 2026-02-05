@@ -60,7 +60,7 @@ If you're unsure about Python, follow the step-by-step instructions below.
    pyinstaller main.spec
    ```
 
-3. **The exe file location and run it**
+3. **Locate the exe file and run it**
    ```powershell
    .\kamihime-auto-battler\dist
    ```
