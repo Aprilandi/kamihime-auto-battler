@@ -13,6 +13,7 @@ def farm_loop(IMAGES, log_widget=None):
         if find_and_click(IMAGES.get('retry'), log_widget=log_widget, robust=False):
 
             check_stamina(IMAGES, log_widget=log_widget)
+            find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True)
             find_and_click(IMAGES['challenge'], log_widget=log_widget, timeout=0.5, optional=True)
 
             combat_sequence(IMAGES, log_widget, is_raid=True)
