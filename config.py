@@ -14,6 +14,22 @@ def resource_path(relative_path):
 PREFS_FILENAME = "raid_prefs.json"
 
 pyautogui.useImageNotFoundException(False)
+
+def get_prefs_path():
+    """Get the path for prefs file.
+
+    For dev: next to the script (current working directory).
+    For exe: next to the executable (not inside the bundle).
+    """
+    if hasattr(sys, '_MEIPASS'):
+        # Running as exe - use directory next to the exe
+        return os.path.join(os.path.dirname(sys.executable), PREFS_FILENAME)
+    else:
+        # Running in dev - use current directory
+        return os.path.join(os.path.abspath("."), PREFS_FILENAME)
+
+
+PREFS_PATH = get_prefs_path()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Image folders root (inside project) and selected folder name. The default
@@ -149,9 +165,6 @@ IMAGES = {
     "next_page": get_img("KHR_next_page"),
     "next_episode": get_img("KHR_next_episode")
 }
-
-
-PREFS_PATH = resource_path(os.path.join(PREFS_FILENAME))
 
 
 def load_prefs():
