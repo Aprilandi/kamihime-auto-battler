@@ -18,12 +18,13 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
         
         time.sleep(1.0)
         if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
-            # incase of off element
-            if find_text(['about', 'enemy', 'attribute', 'resistance'], log_widget=log_widget):
+            # Incase of off elements
+            if find_text(['do', 'you', 'want', 'to', 'challenge', 'the', 'quest', 'with', 'this', 'party', '?'], log_widget=log_widget):
+                log_msg("Found not recommended element. Proceeding...", log_widget=log_widget)
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
-            
-            if find_and_click(IMAGES['ok'], log_widget=log_widget): 
+            else:
                 log_msg("Raid already ended - OK button found.", log_widget=log_widget)
+                find_and_click(IMAGES['ok'], log_widget=log_widget)
                 return False
 
         while state.get("running", False):
@@ -112,7 +113,7 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
 
         if (time.time() - start_time) >= timeout:
             log_msg("Probably connection lost, reloading...", log_widget)
-            if find_and_click(IMAGES['reload'], log_widget=log_widget):
+            if find_and_click(IMAGES['reload'], optional=True, log_widget=log_widget):
                 time.sleep(5.0)
 
                 if find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget):

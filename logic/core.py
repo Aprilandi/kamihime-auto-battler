@@ -292,6 +292,13 @@ def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None):
         time.sleep(SLEEP)
         
         
+def get_all_visible_text(log_widget=None):
+    """Capture a screenshot and extract all visible text using OCR for debugging purposes."""
+    screenshot = pyautogui.screenshot()
+    text = pytesseract.image_to_string(screenshot)
+    log_msg(f"All visible text on screen:\n{text}", log_widget)
+        
+        
 def wait(timeout=3.0, sleep=0.1, log_widget=None, attempts=2):
     time.sleep(SLEEP)
     misses = 0

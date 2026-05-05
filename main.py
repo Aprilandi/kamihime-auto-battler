@@ -212,6 +212,7 @@ if folders:
 ctrl_frame = ctk.CTkFrame(app)
 ctrl_frame.pack(fill="x", padx=10, pady=5)
 ctk.CTkButton(ctrl_frame, text="STOP (F7)", fg_color="red", width=245, command=stop_bot).grid(row=0, column=0, padx=2)
+ctk.CTkButton(ctrl_frame, text="Get All Text (debug)", fg_color="blue", width=245, command=lambda: logic.core.get_all_visible_text(log)).grid(row=1, column=0, padx=2, pady=2)
 # ctk.CTkButton(ctrl_frame, text="RESET", fg_color="orange", width=120, command=reset_list).grid(row=0, column=1, padx=2)
 
 # Mode Grid
