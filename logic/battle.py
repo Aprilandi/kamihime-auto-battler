@@ -19,7 +19,8 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
         time.sleep(1.0)
         if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
             # Incase of off elements
-            if find_text(['do', 'you', 'want', 'to', 'challenge', 'the', 'quest', 'with', 'this', 'party', '?'], log_widget=log_widget):
+            # if find_text(['do', 'you', 'want', 'to', 'challenge', 'the', 'quest', 'with', 'this', 'party', '?'], log_widget=log_widget):
+            if find_text(['?'], log_widget=log_widget):
                 log_msg("Found not recommended element. Proceeding...", log_widget=log_widget)
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
             else:

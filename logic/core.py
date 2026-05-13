@@ -263,6 +263,7 @@ def find_text(texts, log_widget=None):
 
     for t in texts:
         if t.lower() in text_image:
+            # log_msg(f"Tagged word: `{t.lower()}`", log_widget=log_widget)
             return True
 
     return False
@@ -297,7 +298,10 @@ def get_all_visible_text(log_widget=None):
     screenshot = pyautogui.screenshot()
     text = pytesseract.image_to_string(screenshot)
     log_msg(f"All visible text on screen:\n{text}", log_widget)
-        
+    # if find_text(['?'], log_widget=log_widget):
+    #     log_msg("True", log_widget=log_widget)
+    # else:
+    #     log_msg("False", log_widget=log_widget)
         
 def wait(timeout=3.0, sleep=0.1, log_widget=None, attempts=2):
     time.sleep(SLEEP)
