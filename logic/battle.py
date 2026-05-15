@@ -122,9 +122,8 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
                     while state.get("running", False):
                         find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True) # If there are scoreboard
                         if IMAGES.get('return_raid_battle') and pyautogui.locateOnScreen(IMAGES['return_raid_battle'], confidence=CONFIDENCE):
-                            find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget)
                             log_msg("Battle already ended, returning to raid quest list", log_widget=log_widget)
-                            return False
+                            break
                         if IMAGES.get('start_game') and pyautogui.locateOnScreen(IMAGES['start_game'], confidence=CONFIDENCE):
                             find_and_click(IMAGES['start_game'], log_widget=log_widget)
                             log_msg("Connection lost, returning to main page going to raid quests", log_widget=log_widget)
