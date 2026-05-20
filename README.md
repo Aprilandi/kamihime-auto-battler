@@ -3,7 +3,7 @@
 
 A simple GUI bot that automates quests and raids for Kamihime Project R. This bot currently only optimized for screen resolution 1920x1080 with 100% display scaling and browser setting NO ZOOM (Zoom in nor Zoom out). If you have different screen resolution this README explains how to set up, modify, and run the program on Windows (PowerShell), aimed at users without a programming background.
 
-IMPORTANT: This tool controls your mouse and keyboard. Only run it when you can safely let the program take over input. Use the STOP button or press F7 (may need multiple times) to stop the bot immediately.
+IMPORTANT: This tool controls your mouse. Only run it when you can safely let the program take over input. Use the STOP button or press F7 (may need multiple times) to stop the bot immediately.
 
 ---
 
