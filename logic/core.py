@@ -100,6 +100,7 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
     log_msg(f"Searching for {name}", log_widget)
 
     start_time = time.time()
+    clicked = False
     
     while state.get("running", False): 
         btn = pyautogui.locateOnScreen(image, confidence=confidence)
@@ -133,9 +134,11 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
                 target_y = center.y + offset
                 
                 pyautogui.click(target_x, target_y)
+                clicked = True
             except Exception:
                 time.sleep(SLEEP)
                 pyautogui.click(btn.left + 5, btn.top + 5)
+                clicked = True
 
             found_still = pyautogui.locateOnScreen(image, region=region, confidence=confidence)
                     
@@ -144,11 +147,14 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
                 wait(log_widget=log_widget)
                 return True
             else:
-                start_time = time.time()
+                log_msg(f"Button {name} still visible, will try clicking again...", log_widget)
         
         if optional: 
             elapsed = time.time() - start_time 
             if elapsed >= timeout: 
+                if robust and clicked:
+                    log_msg(f"Button {name} vanished after a click, assumed success.", log_widget=log_widget)
+                    return True
                 return False 
             
         # Prevent CPU hogging 
