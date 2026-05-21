@@ -287,6 +287,10 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                 if find_and_click_all(raid_image, confidence=0.95, log_widget=log_widget) is True:
                     if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
                         find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True, timeout=2.0)
+                        while pyautogui.locateOnScreen(IMAGES['raid_event']) is False and state.get("running", False):
+                            post_battle(IMAGES, log_widget=log_widget, confidence=0.85)
+                            find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True)
+                            time.sleep(SLEEP)
                     else:
                         defeat = True
                         break
