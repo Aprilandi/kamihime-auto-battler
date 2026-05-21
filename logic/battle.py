@@ -133,9 +133,6 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
                 if find_and_click(IMAGES['attack'], optional=True, timeout=3.0, log_widget=log_widget):
                     log_msg("Battle is still on going, continuing...", log_widget=log_widget)
 
-                # if find_and_click(IMAGES['support_btn'], confidence=0.95, optional=True, robust=False, log_widget=log_widget):
-                #     find_and_click(IMAGES['support_req'], optional=True, log_widget=log_widget)
-
                 start_time = time.time()
                     
         time.sleep(SLEEP)
