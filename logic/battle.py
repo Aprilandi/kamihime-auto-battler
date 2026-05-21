@@ -65,7 +65,7 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
             return True
 
 
-def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=False, is_raid=False, timeout=600, isPostBattle = True):
+def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=False, is_raid=False, timeout=300, isPostBattle = True):
     log_msg("Waiting for battle to end...", log_widget)
 
     start_time = time.time()
@@ -74,7 +74,7 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
         if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             log_msg("Defeated detected cancelling the revive...", log_widget)
             # if find_and_click(IMAGES["cancel"], log_widget=log_widget):
-            if find_and_click(IMAGES['cancel'], log_widget=log_widget):
+            if find_and_click(IMAGES['cancel'], robust=False, log_widget=log_widget):
                 if rescue_active or host_raid:
                     log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
                     # find_and_click(IMAGES['cancel'], log_widget=log_widget)
@@ -133,8 +133,8 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
                 if find_and_click(IMAGES['attack'], optional=True, timeout=3.0, log_widget=log_widget):
                     log_msg("Battle is still on going, continuing...", log_widget=log_widget)
 
-                if find_and_click(IMAGES['support_btn'], confidence=0.95, optional=True, robust=False, log_widget=log_widget):
-                    find_and_click(IMAGES['support_req'], optional=True, log_widget=log_widget)
+                # if find_and_click(IMAGES['support_btn'], confidence=0.95, optional=True, robust=False, log_widget=log_widget):
+                #     find_and_click(IMAGES['support_req'], optional=True, log_widget=log_widget)
 
                 start_time = time.time()
                     
