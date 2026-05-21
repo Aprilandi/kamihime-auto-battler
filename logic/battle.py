@@ -74,20 +74,25 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
         if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             log_msg("Defeated detected cancelling the revive...", log_widget)
             # if find_and_click(IMAGES["cancel"], log_widget=log_widget):
-            if find_and_click(IMAGES['cancel'], robust=False, log_widget=log_widget):
-                if rescue_active or host_raid:
-                    log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
-                    # find_and_click(IMAGES['cancel'], log_widget=log_widget)
-                    find_and_click(IMAGES['cancel'], log_widget=log_widget)
-                    continue
+            while state.get("running", False) and pyautogui.locateOnScreen(IMAGES['defeat_elixir'], confidence=CONFIDENCE):
+                if find_text(['continue the battle'], log_widget=log_widget) is False:
+                    break
                 else:
-                    log_msg("Rescue is disabled or doesn't exist - returning to quest list", log_widget)
-                    # this is to make sure return to quest list is exist
-                    # because there is a chance that the raid is ended just after player died
-                    # so that it wont stuck looking for return to quest list button
-                    wait(log_widget=log_widget)
-                    if find_and_click(IMAGES['quest_list'], log_widget=log_widget, optional=True, robust=False):
-                        return False
+                    find_and_click(IMAGES['cancel'], robust=False, optional=True, log_widget=log_widget)
+                time.sleep(SLEEP)
+            if rescue_active or host_raid:
+                log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
+                # find_and_click(IMAGES['cancel'], log_widget=log_widget)
+                find_and_click(IMAGES['cancel'], log_widget=log_widget)
+                continue
+            else:
+                log_msg("Rescue is disabled or doesn't exist - returning to quest list", log_widget)
+                # this is to make sure return to quest list is exist
+                # because there is a chance that the raid is ended just after player died
+                # so that it wont stuck looking for return to quest list button
+                wait(log_widget=log_widget)
+                if find_and_click(IMAGES['quest_list'], log_widget=log_widget, optional=True, robust=False):
+                    return False
             break
         
         if IMAGES.get("return") and pyautogui.locateOnScreen(IMAGES["return"], confidence=CONFIDENCE):
