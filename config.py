@@ -11,7 +11,7 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 
-PREFS_FILENAME = "raid_prefs.json"
+PREFS_FILENAME = "K-Bot raid_prefs.json"
 
 pyautogui.useImageNotFoundException(False)
 
