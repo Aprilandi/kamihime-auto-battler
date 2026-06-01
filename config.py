@@ -96,7 +96,7 @@ SLEEP = 0.5
 
 # config.py
 ELEMENTS = ["fire", "water", "wind", "thunder", "light", "dark", "phantom"]
-DIFFICULTIES = ["malicious_plus", "malicious", "guardian_plus", "guardian", "ragnarok", "ultimate", "expert", "standard"]
+DIFFICULTIES = ["cataclysm", "malicious_plus", "malicious", "guardian_plus", "guardian", "ragnarok", "ultimate", "expert", "standard"]
 CONNECTING = get_img('KHR_connecting')
 
 # Per-element difficulty lists. Most elements use the shared DIFFICULTIES list,

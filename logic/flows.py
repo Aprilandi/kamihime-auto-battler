@@ -1,6 +1,6 @@
 import time
 import pyautogui
-from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina, post_battle
+from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina, post_battle, scroll_down
 from .battle import combat_sequence, ongoing_battle
 from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES, ALL_POSSIBLE_DIFFS
 
@@ -298,7 +298,12 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
             if defeat:
                 break
 
-        if next_page(IMAGES, log_widget=log_widget):
+        # if next_page(IMAGES, log_widget=log_widget):
+        if scroll_down(
+                scroll_x=680,
+                scroll_y=420,
+                list_region=(493, 270, 375, 300)  # x, y, w, h of just the game list area
+            ):
             log_msg("Navigated to next page of raids", log_widget)
         else:
             log_msg("No selected raid found. Refreshing...", log_widget)
@@ -309,4 +314,18 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                     wait(log_widget=log_widget)
                     # for in case of rank up
                     find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
-            
+
+
+def union_event(IMAGES, log_widget=None, index=0):
+    """Union Event mode - runs union event battles.
+    
+    Args:
+        IMAGES: Dictionary of image paths
+        log_widget: Optional log widget for displaying messages
+    """
+    if index != 0:
+        index = index - 1
+
+    log_msg(f"Starting Union Event mode {index}", log_widget)
+    # Backend implementation to be added by user
+    pass

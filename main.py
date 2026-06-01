@@ -82,6 +82,7 @@ def _set_mode_buttons_state(state_value):
         btn_retry.configure(state=state_value)
         btn_episode.configure(state=state_value)
         btn_raid_farm.configure(state=state_value)
+        btn_union.configure(state=state_value)
         # btn_tower.configure(state=state_value)
     except Exception:
         pass
@@ -235,13 +236,54 @@ btn_retry.grid(row=2, column=0, padx=2, pady=2)
 btn_episode = ctk.CTkButton(mode_frame, text="Episode Rush", width=120, command=lambda: start_mode(logic.episode_rush, "episode_rush", IMAGES, log))
 btn_episode.grid(row=2, column=1, padx=2, pady=2)
 
+# UNION EVENT
+# btn_union = ctk.CTkButton(
+#     mode_frame, text="Union Event", width=120,
+#     command=lambda: ask_union_index(
+#         lambda index: start_mode(logic.union_event, "union_event", IMAGES, log, index)
+#     )
+# )
+# btn_union.grid(row=3, column=0, padx=2, pady=2)
+
+def ask_union_index(callback):
+    popup = ctk.CTkToplevel()
+    popup.title("Select Stage")
+    popup.geometry("200x160")
+    popup.grab_set()  # makes it modal
+    popup.attributes("-topmost", True)
+
+    selected = ctk.IntVar(value=1)
+    result = {"value": 1}  # default if closed without selecting
+
+    ctk.CTkLabel(popup, text="Select Union Stage:").pack(pady=(15, 5))
+
+    option_menu = ctk.CTkOptionMenu(
+        popup,
+        values=[str(i) for i in range(1, 7)],
+        variable=ctk.StringVar(value="1"),
+        command=lambda v: result.update({"value": int(v)})
+    )
+    option_menu.pack(pady=5)
+
+    def confirm():
+        result["value"] = int(option_menu.get())
+        popup.destroy()
+
+    ctk.CTkButton(popup, text="Confirm", command=confirm).pack(pady=10)
+
+    # runs callback whether confirmed or just closed (X button)
+    popup.protocol("WM_DELETE_WINDOW", confirm)
+    popup.wait_window()  # blocks until popup is closed
+
+    callback(result["value"])
+
 
 # RESCUE toggle checkbox (controls logic.state['RESCUE'])
 rescue_var = ctk.BooleanVar(value=logic.state.get("rescue", True))
 def _toggle_rescue():
     logic.state["rescue"] = rescue_var.get()
 
-ctk.CTkCheckBox(mode_frame, text="RESCUE", variable=rescue_var, command=_toggle_rescue).grid(row=3, column=0, columnspan=2, pady=6)
+ctk.CTkCheckBox(mode_frame, text="RESCUE", variable=rescue_var, command=_toggle_rescue).grid(row=4, column=0, columnspan=2, pady=6)
 
 # Raid Config
 scroll = ctk.CTkScrollableFrame(app, height=300, label_text="Raid Config")
@@ -252,6 +294,13 @@ element_child_vars = {}
 element_parent_vars = {}
 element_all_btns = {}
 
+# Only released Cataclysm raids should be selectable. Add new elements here as they go live.
+RELEASED_NEW_DIFFICULTY = {"fire"}
+
+def _is_new_difficulty_disabled(el, diff):
+    # return False # if the new difficulty already fully released return false.
+    return diff == "cataclysm" and el not in RELEASED_NEW_DIFFICULTY
+
 for el in ELEMENTS:
     # Parent checkbox for the whole element (persisted under raid_settings[el]['__element_enabled__'])
     parent_init = logic.state.get("raid_settings", {}).get(el, {}).get("enable", True)
@@ -261,7 +310,9 @@ for el in ELEMENTS:
         def _on_parent():
             val = pv.get()
             # set all child vars and update runtime state
-            for cv, diff in element_child_vars.get(e, []):
+            for cv, diff, disabled in element_child_vars.get(e, []):
+                if disabled:
+                    continue
                 cv.set(val)
                 logic.state["raid_settings"][e]["difficulty"][diff] = val
             # persist enable flag
@@ -287,13 +338,21 @@ for el in ELEMENTS:
     for d in ELEMENT_DIFFICULTIES.get(el, DIFFICULTIES):
         # initialize checkbox state from persisted runtime state
         init_val = logic.state.get("raid_settings", {}).get(el, {}).get("difficulty", {}).get(d, True)
+        is_disabled = _is_new_difficulty_disabled(el, d)
+        if is_disabled:
+            init_val = False
+            try:
+                logic.state["raid_settings"][el]["difficulty"][d] = False
+            except Exception:
+                pass
+
         var = ctk.BooleanVar(value=init_val)
 
         def make_cb_command(e=el, di=d, v=var, pv=parent_var):
             def _cb():
                 logic.state["raid_settings"][e]["difficulty"][di] = v.get()
                 # update parent: checked if any child checked
-                any_checked = any(cv.get() for cv, _ in element_child_vars.get(e, []))
+                any_checked = any(cv.get() for cv, _, disabled in element_child_vars.get(e, []) if not disabled)
                 pv.set(any_checked)
                 logic.state["raid_settings"][e]["enable"] = any_checked
                 # persist change immediately
@@ -303,22 +362,32 @@ for el in ELEMENTS:
                     pass
             return _cb
 
-        cb = ctk.CTkCheckBox(scroll, text=d, font=("Arial", 9), height=16, variable=var, command=make_cb_command())
+        cb = ctk.CTkCheckBox(
+            scroll,
+            text=d,
+            font=("Arial", 9),
+            height=16,
+            variable=var,
+            command=make_cb_command(),
+            state="disabled" if is_disabled else "normal"
+        )
         if init_val:
             cb.select()
         cb.pack(anchor="w", padx=20)
-        element_child_vars[el].append((var, d))
+        element_child_vars[el].append((var, d, is_disabled))
 
     # After children are created, add a toggle-all button for this element that
     # switches between enabling all difficulties and disabling all.
     def _toggle_all_for_element(e=el, btn_ref=None):
-        # determine if all currently enabled
-        all_on = all(cv.get() for cv, _ in element_child_vars.get(e, []))
+        # determine if all currently enabled (skip disabled checkboxes)
+        all_on = all(cv.get() for cv, _, disabled in element_child_vars.get(e, []) if not disabled)
         new_val = not all_on
-        for cv, diff in element_child_vars.get(e, []):
+        for cv, diff, disabled in element_child_vars.get(e, []):
+            if disabled:
+                continue
             cv.set(new_val)
             logic.state["raid_settings"][e]["difficulty"][diff] = new_val
-        logic.state["raid_settings"][e]["enable"] = any(cv.get() for cv, _ in element_child_vars.get(e, []))
+        logic.state["raid_settings"][e]["enable"] = any(cv.get() for cv, _, disabled in element_child_vars.get(e, []) if not disabled)
         try:
             element_parent_vars.get(e).set(logic.state["raid_settings"][e]["enable"])
         except Exception:
@@ -346,7 +415,7 @@ for el in ELEMENTS:
     all_btn.configure(command=lambda e=el, b=all_btn: _toggle_all_for_element(e, b))
     # set initial label to 'None' if all already enabled
     try:
-        if all(cv.get() for cv, _ in element_child_vars.get(el, [])):
+        if all(cv.get() for cv, _, disabled in element_child_vars.get(el, []) if not disabled):
             all_btn.configure(text="None")
     except Exception:
         pass
@@ -373,7 +442,9 @@ controls_frame.pack(fill="x", padx=10, pady=(6,8))
 
 def _any_diff_disabled():
     for el in ELEMENTS:
-        for cv, _ in element_child_vars.get(el, []):
+        for cv, _, disabled in element_child_vars.get(el, []):
+            if disabled:
+                continue
             if not cv.get():
                 return True
     return False
@@ -391,19 +462,21 @@ def toggle_all_difficulties(btn=None):
     enable = _any_diff_disabled()
     for el in ELEMENTS:
         # enable/disable every difficulty this element supports
-        for cv, diff in element_child_vars.get(el, []):
+        for cv, diff, disabled in element_child_vars.get(el, []):
+            if disabled:
+                continue
             cv.set(enable)
             logic.state["raid_settings"][el]["difficulty"][diff] = enable
         try:
-            element_parent_vars.get(el).set(any(cv.get() for cv, _ in element_child_vars.get(el, [])))
-            logic.state["raid_settings"][el]["enable"] = any(cv.get() for cv, _ in element_child_vars.get(el, []))
+            element_parent_vars.get(el).set(any(cv.get() for cv, _, disabled in element_child_vars.get(el, []) if not disabled))
+            logic.state["raid_settings"][el]["enable"] = any(cv.get() for cv, _, disabled in element_child_vars.get(el, []) if not disabled)
         except Exception:
             pass
 
     # update per-element All button labels
     for e, btn_ref in element_all_btns.items():
         try:
-            if all(cv.get() for cv, _ in element_child_vars.get(e, [])):
+            if all(cv.get() for cv, _, disabled in element_child_vars.get(e, []) if not disabled):
                 btn_ref.configure(text="None")
             else:
                 btn_ref.configure(text="All")
@@ -430,35 +503,37 @@ if diffs_for_all:
     # OptionMenu will call toggle_specific_diff when a value is selected.
     def toggle_specific_diff(selected):
         sel = selected
-        # if any non-phantom element has this diff disabled, we'll enable it across non-phantom elements
-        # use the correct path into logic.state['raid_settings'] when checking current values
+        # if any enabled non-phantom element has this diff disabled, we'll enable it across those elements
         should_enable = any(
             not logic.state.get('raid_settings', {}).get(el, {}).get('difficulty', {}).get(sel, False)
-            for el in ELEMENTS if el != 'phantom'
+            for el in ELEMENTS
+            if el != 'phantom' and not _is_new_difficulty_disabled(el, sel)
         )
         for el in ELEMENTS:
             if el == 'phantom':
                 continue
             # if this element doesn't have that difficulty, skip
-            if sel not in [d for _, d in element_child_vars.get(el, [])]:
+            if sel not in [d for _, d, _ in element_child_vars.get(el, [])]:
                 continue
             # find the checkbox var and set it
-            for cv, d in element_child_vars.get(el, []):
+            for cv, d, disabled in element_child_vars.get(el, []):
                 if d == sel:
+                    if disabled:
+                        break
                     cv.set(should_enable)
                     logic.state["raid_settings"][el]["difficulty"][d] = should_enable
                     break
             # update parent
             try:
-                element_parent_vars.get(el).set(any(cv.get() for cv, _ in element_child_vars.get(el, [])))
-                logic.state["raid_settings"][el]["enable"] = any(cv.get() for cv, _ in element_child_vars.get(el, []))
+                element_parent_vars.get(el).set(any(cv.get() for cv, _, disabled in element_child_vars.get(el, []) if not disabled))
+                logic.state["raid_settings"][el]["enable"] = any(cv.get() for cv, _, disabled in element_child_vars.get(el, []) if not disabled)
             except Exception:
                 pass
 
         # update per-element All button labels
         for e, btn_ref in element_all_btns.items():
             try:
-                if all(cv.get() for cv, _ in element_child_vars.get(e, [])):
+                if all(cv.get() for cv, _, disabled in element_child_vars.get(e, []) if not disabled):
                     btn_ref.configure(text="None")
                 else:
                     btn_ref.configure(text="All")

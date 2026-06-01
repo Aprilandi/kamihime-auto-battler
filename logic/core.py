@@ -1,5 +1,6 @@
 import time
 import pyautogui
+import numpy as np
 import os
 from config import CONFIDENCE, IMAGES, SLEEP, CONNECTING, resource_path
 from PIL import Image
@@ -257,10 +258,36 @@ def next_page(IMAGES, log_widget=None):
         log_msg("Reached end of page.")
         return False
     else:
-        log_msg("Searching the down button...")
+        log_msg("Searching the down button...", log_widget=log_widget)
         if find_and_click(IMAGES.get('down'), log_widget=log_widget, robust=False):
             time.sleep(1.0)
             return True
+
+
+def scroll_down(list_region, log_widget=None, scroll_x = 600, scroll_y = 420):
+    log_msg("Scrolling down...", log_widget=log_widget)
+    before = pyautogui.screenshot()
+
+    pyautogui.moveTo(scroll_x, scroll_y)
+    pyautogui.scroll(-150)
+    time.sleep(SLEEP)
+    
+    after = pyautogui.screenshot()
+    
+    # if screenshots are identical, we've hit the bottom
+    if screenshots_are_same(before, after, list_region):
+        log_msg("Reached bottom of list", log_widget)
+        return False
+    else:
+        return True
+
+
+def screenshots_are_same(img1, img2, region, threshold=0.99):
+    x, y, w, h = region
+    crop1 = np.array(img1.crop((x, y, x+w, y+h)))
+    crop2 = np.array(img2.crop((x, y, x+w, y+h)))
+    similarity = np.mean(crop1 == crop2)
+    return similarity >= threshold
 
 
 def find_text(texts, log_widget=None):
@@ -275,26 +302,43 @@ def find_text(texts, log_widget=None):
     return False
 
 
-def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None):
+def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None, index=0, phrase=False):
     screenshot = pyautogui.screenshot()
     data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
     start_time = time.time()
 
     log_msg(f"Searching text {texts}...", log_widget)
     while state.get("running", False):
-        for i, word in enumerate(data["text"]):
-            if word in texts:
-                x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
-                center_x, center_y = x + w // 2, y + h // 2
+        matches = []
 
-                log_msg(f"Found text '{word}', clicking", log_widget)
-                pyautogui.click(center_x, center_y)
-                return True
+        if phrase and len(texts) > 1:
+            # Look for consecutive words matching the phrase in order
+            words = [w.lower() for w in data["text"]]
+            phrase_words = [w.lower() for w in texts]
 
-        if optional: 
-            elapsed = time.time() - start_time 
-            if elapsed >= timeout: 
-                return False 
+            for i in range(len(words) - len(phrase_words) + 1):
+                if words[i:i+len(phrase_words)] == phrase_words:
+                    # Bounding box spanning all matched words
+                    x = data["left"][i]
+                    y = data["top"][i]
+                    x2 = data["left"][i + len(phrase_words) - 1] + data["width"][i + len(phrase_words) - 1]
+                    y2 = max(data["top"][j] + data["height"][j] for j in range(i, i + len(phrase_words)))
+                    matches.append(((x + x2) // 2, (y + y2) // 2, " ".join(texts)))
+        else:
+            for i, word in enumerate(data["text"]):
+                if word in texts:
+                    x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+                    matches.append((x + w // 2, y + h // 2, word))
+
+        if len(matches) > index:
+            center_x, center_y, word = matches[index]
+            log_msg(f"Found '{word}' (match #{index}), clicking", log_widget)
+            pyautogui.click(center_x, center_y)
+            return True
+
+        if optional:
+            if time.time() - start_time >= timeout:
+                return False
 
         time.sleep(SLEEP)
         

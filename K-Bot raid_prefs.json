@@ -1,0 +1,180 @@
+{
+  "raid_settings": {
+    "fire": {
+      "enable": true,
+      "difficulty": {
+        "cataclysm": true,
+        "malicious_plus": true,
+        "malicious": true,
+        "guardian_plus": true,
+        "guardian": true,
+        "ragnarok": true,
+        "ultimate": true,
+        "expert": true,
+        "standard": true
+      }
+    },
+    "water": {
+      "enable": true,
+      "difficulty": {
+        "cataclysm": false,
+        "malicious_plus": true,
+        "malicious": true,
+        "guardian_plus": true,
+        "guardian": true,
+        "ragnarok": true,
+        "ultimate": true,
+        "expert": true,
+        "standard": true
+      }
+    },
+    "wind": {
+      "enable": true,
+      "difficulty": {
+        "cataclysm": false,
+        "malicious_plus": true,
+        "malicious": true,
+        "guardian_plus": true,
+        "guardian": true,
+        "ragnarok": true,
+        "ultimate": true,
+        "expert": true,
+        "standard": true
+      }
+    },
+    "thunder": {
+      "enable": true,
+      "difficulty": {
+        "cataclysm": false,
+        "malicious_plus": true,
+        "malicious": true,
+        "guardian_plus": true,
+        "guardian": true,
+        "ragnarok": true,
+        "ultimate": true,
+        "expert": true,
+        "standard": true
+      }
+    },
+    "light": {
+      "enable": true,
+      "difficulty": {
+        "cataclysm": false,
+        "malicious_plus": true,
+        "malicious": true,
+        "guardian_plus": true,
+        "guardian": true,
+        "ragnarok": true,
+        "ultimate": true,
+        "expert": true,
+        "standard": true
+      }
+    },
+    "dark": {
+      "enable": true,
+      "difficulty": {
+        "cataclysm": false,
+        "malicious_plus": true,
+        "malicious": true,
+        "guardian_plus": true,
+        "guardian": true,
+        "ragnarok": true,
+        "ultimate": true,
+        "expert": true,
+        "standard": true
+      }
+    },
+    "phantom": {
+      "enable": true,
+      "difficulty": {
+        "loki": true,
+        "och_plus": true,
+        "och": true
+      }
+    }
+  },
+  "completed_raids": {
+    "fire": {
+      "cataclysm": 0,
+      "malicious_plus": 0,
+      "malicious": 0,
+      "guardian_plus": 0,
+      "guardian": 0,
+      "ragnarok": 0,
+      "ultimate": 0,
+      "expert": 0,
+      "standard": 0
+    },
+    "water": {
+      "cataclysm": 0,
+      "malicious_plus": 0,
+      "malicious": 0,
+      "guardian_plus": 0,
+      "guardian": 0,
+      "ragnarok": 0,
+      "ultimate": 0,
+      "expert": 0,
+      "standard": 0
+    },
+    "wind": {
+      "cataclysm": 0,
+      "malicious_plus": 0,
+      "malicious": 0,
+      "guardian_plus": 0,
+      "guardian": 0,
+      "ragnarok": 0,
+      "ultimate": 0,
+      "expert": 0,
+      "standard": 0
+    },
+    "thunder": {
+      "cataclysm": 0,
+      "malicious_plus": 0,
+      "malicious": 0,
+      "guardian_plus": 0,
+      "guardian": 0,
+      "ragnarok": 0,
+      "ultimate": 0,
+      "expert": 0,
+      "standard": 0
+    },
+    "light": {
+      "cataclysm": 0,
+      "malicious_plus": 0,
+      "malicious": 0,
+      "guardian_plus": 0,
+      "guardian": 0,
+      "ragnarok": 0,
+      "ultimate": 0,
+      "expert": 0,
+      "standard": 0
+    },
+    "dark": {
+      "cataclysm": 0,
+      "malicious_plus": 0,
+      "malicious": 0,
+      "guardian_plus": 0,
+      "guardian": 0,
+      "ragnarok": 0,
+      "ultimate": 0,
+      "expert": 0,
+      "standard": 0
+    },
+    "phantom": {
+      "loki": 0,
+      "och_plus": 0,
+      "och": 0
+    }
+  },
+  "max_runs": {
+    "fire": 1,
+    "water": 1,
+    "wind": 1,
+    "thunder": 1,
+    "light": 1,
+    "dark": 1,
+    "phantom": 2
+  },
+  "rescue": true,
+  "image_folder": null
+}
