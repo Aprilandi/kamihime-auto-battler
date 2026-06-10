@@ -326,6 +326,9 @@ def union_event(IMAGES, log_widget=None, index=0):
     if index != 0:
         index = index - 1
 
+    if index > 2:
+        index = index - 3
+    
     log_msg(f"Starting Union Event mode {index}", log_widget)
     # Backend implementation to be added by user
     pass

@@ -1,6 +1,6 @@
 import time
 import pyautogui
-from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_text, find_and_click_text, wait
+from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_text, find_and_click_text, wait, check_stamina
 from config import SLEEP, CONFIDENCE
 
 def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_support=True, isPostBattle = True):
@@ -16,11 +16,11 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
             find_and_click(IMAGES['support'], log_widget=log_widget)
             find_and_click(IMAGES['go_quest'], log_widget=log_widget)
         
-        time.sleep(1.0)
+        check_stamina(IMAGES, log_widget=log_widget)
         if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
             # Incase of off elements
             # if find_text(['do', 'you', 'want', 'to', 'challenge', 'the', 'quest', 'with', 'this', 'party', '?'], log_widget=log_widget):
-            if find_text(['?'], log_widget=log_widget):
+            if find_text(['party?'], log_widget=log_widget):
                 log_msg("Found not recommended element. Proceeding...", log_widget=log_widget)
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
             else:
