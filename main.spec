@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='K-Bot v0.3.1',
+    name='K-Bot',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
