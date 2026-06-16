@@ -11,16 +11,19 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
         
         find_and_click(IMAGES['go_quest'], log_widget=log_widget)
         
+        wait(log_widget=log_widget, timeout=0.5)
+        
         # if there is failed raid it shows up after go quest
-        if find_and_click(IMAGES['batch'], optional=True, log_widget=log_widget):
+        if find_and_click(IMAGES['batch'], optional=True, log_widget=log_widget, timeout=0.5):
             find_and_click(IMAGES['support'], log_widget=log_widget)
             find_and_click(IMAGES['go_quest'], log_widget=log_widget)
         
-        check_stamina(IMAGES, log_widget=log_widget)
+        # check_stamina(IMAGES, log_widget=log_widget)
+        wait(log_widget=log_widget, timeout=0.5)
         if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
             # Incase of off elements
-            # if find_text(['do', 'you', 'want', 'to', 'challenge', 'the', 'quest', 'with', 'this', 'party', '?'], log_widget=log_widget):
-            if find_text(['party?'], log_widget=log_widget):
+            if find_text(['element'], log_widget=log_widget):
+            # if find_text(['party?'], log_widget=log_widget):
                 log_msg("Found not recommended element. Proceeding...", log_widget=log_widget)
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
             else:

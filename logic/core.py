@@ -269,6 +269,7 @@ def scroll_down(list_region, log_widget=None, scroll_x = 600, scroll_y = 420):
     before = pyautogui.screenshot()
 
     pyautogui.moveTo(scroll_x, scroll_y)
+    wait(log_widget=log_widget, timeout=1)
     pyautogui.scroll(-150)
     time.sleep(SLEEP)
     
@@ -294,12 +295,14 @@ def find_text(texts, log_widget=None):
     screenshot = pyautogui.screenshot()
     text_image = pytesseract.image_to_string(screenshot).lower()
 
+    # Return True only when all provided words are present in the screen text
     for t in texts:
-        if t.lower() in text_image:
-            # log_msg(f"Tagged word: `{t.lower()}`", log_widget=log_widget)
-            return True
+        if t.lower() not in text_image:
+            # log_msg(f"Tagged Word: {t.lower()} (False)", log_widget=log_widget)
+            return False
+        # log_msg(f"Tagged Word: {t.lower()} (True)", log_widget=log_widget)
 
-    return False
+    return True
 
 
 def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None, index=0, phrase=False):
@@ -348,7 +351,7 @@ def get_all_visible_text(log_widget=None):
     screenshot = pyautogui.screenshot()
     text = pytesseract.image_to_string(screenshot)
     log_msg(f"All visible text on screen:\n{text}", log_widget)
-    # if find_text(['?'], log_widget=log_widget):
+    # if find_text(['element'], log_widget=log_widget):
     #     log_msg("True", log_widget=log_widget)
     # else:
     #     log_msg("False", log_widget=log_widget)
