@@ -13,23 +13,30 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
         
         wait(log_widget=log_widget, timeout=0.5)
         
+        # Incase of off elements
+        if find_text(['element'], log_widget=log_widget):
+        # if find_text(['party?'], log_widget=log_widget):
+            log_msg("Found not recommended element. Proceeding...", log_widget=log_widget)
+            find_and_click(IMAGES['ok'], log_widget=log_widget)
+
+        wait(log_widget=log_widget, timeout=0.5)
+
         # if there is failed raid it shows up after go quest
         if find_and_click(IMAGES['batch'], optional=True, log_widget=log_widget, timeout=0.5):
             find_and_click(IMAGES['support'], log_widget=log_widget)
             find_and_click(IMAGES['go_quest'], log_widget=log_widget)
-        
-        # check_stamina(IMAGES, log_widget=log_widget)
+
         wait(log_widget=log_widget, timeout=0.5)
+
+        # Pop up raid already ended before entering the battle (after selecting party)
         if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
-            # Incase of off elements
-            if find_text(['element'], log_widget=log_widget):
-            # if find_text(['party?'], log_widget=log_widget):
-                log_msg("Found not recommended element. Proceeding...", log_widget=log_widget)
-                find_and_click(IMAGES['ok'], log_widget=log_widget)
-            else:
-                log_msg("Raid already ended - OK button found.", log_widget=log_widget)
-                find_and_click(IMAGES['ok'], log_widget=log_widget)
-                return False
+            log_msg("Raid already ended - OK button found.", log_widget=log_widget)
+            find_and_click(IMAGES['ok'], log_widget=log_widget)
+            # Pop up raid already ended in battle (when successfully entered the battle where there is still the animation and the boss has already died before you can do anything)
+            if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE) is False:
+                return False                
+
+        # check_stamina(IMAGES, log_widget=log_widget)
 
         while state.get("running", False):
             if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
