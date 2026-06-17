@@ -299,6 +299,7 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                 break
 
         # if next_page(IMAGES, log_widget=log_widget):
+        wait(log_widget=log_widget, timeout=1)
         if scroll_down(
                 scroll_x=680,
                 scroll_y=420,
@@ -314,6 +315,7 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                     wait(log_widget=log_widget)
                     # for in case of rank up
                     find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
+        time.sleep(0.5)
 
 
 def union_event(IMAGES, log_widget=None, index=0):

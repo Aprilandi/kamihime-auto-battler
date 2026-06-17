@@ -269,7 +269,6 @@ def scroll_down(list_region, log_widget=None, scroll_x = 600, scroll_y = 420):
     before = pyautogui.screenshot()
 
     pyautogui.moveTo(scroll_x, scroll_y)
-    wait(log_widget=log_widget, timeout=1)
     pyautogui.scroll(-150)
     time.sleep(SLEEP)
     
