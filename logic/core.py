@@ -305,32 +305,89 @@ def find_text(texts, log_widget=None):
 
 
 def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None, index=0, phrase=False):
-    screenshot = pyautogui.screenshot()
-    data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
     start_time = time.time()
 
     log_msg(f"Searching text {texts}...", log_widget)
     while state.get("running", False):
+        screenshot = pyautogui.screenshot()
+        data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
         matches = []
 
         if phrase and len(texts) > 1:
-            # Look for consecutive words matching the phrase in order
+            # Group words into horizontal rows so repeated entries are selected by row order.
             words = [w.lower() for w in data["text"]]
             phrase_words = [w.lower() for w in texts]
+            word_items = []
 
-            for i in range(len(words) - len(phrase_words) + 1):
-                if words[i:i+len(phrase_words)] == phrase_words:
-                    # Bounding box spanning all matched words
-                    x = data["left"][i]
-                    y = data["top"][i]
-                    x2 = data["left"][i + len(phrase_words) - 1] + data["width"][i + len(phrase_words) - 1]
-                    y2 = max(data["top"][j] + data["height"][j] for j in range(i, i + len(phrase_words)))
+            for i, word in enumerate(words):
+                if not word:
+                    continue
+                word_items.append({
+                    "word": word,
+                    "x": data["left"][i],
+                    "y": data["top"][i],
+                    "w": data["width"][i],
+                    "h": data["height"][i],
+                })
+
+            rows = []
+            for item in word_items:
+                cy = item["y"] + item["h"] // 2
+                placed = False
+                for row in rows:
+                    if abs(row["y"] - cy) <= 16:
+                        row["words"].append(item)
+                        row["y"] = min(row["y"], cy)
+                        placed = True
+                        break
+                if not placed:
+                    rows.append({"y": cy, "words": [item]})
+
+            for row in rows:
+                row_words = sorted(row["words"], key=lambda item: item["x"])
+                phrase_pos = 0
+                first_idx = None
+                last_idx = None
+
+                for idx, item in enumerate(row_words):
+                    if item["word"] == phrase_words[phrase_pos]:
+                        if phrase_pos == 0:
+                            first_idx = idx
+                        if phrase_pos == len(phrase_words) - 1:
+                            last_idx = idx
+                            break
+                        phrase_pos += 1
+
+                if first_idx is not None and last_idx is not None:
+                    left_item = row_words[first_idx]
+                    right_item = row_words[last_idx]
+                    x = left_item["x"]
+                    y = left_item["y"]
+                    x2 = right_item["x"] + right_item["w"]
+                    y2 = right_item["y"] + right_item["h"]
                     matches.append(((x + x2) // 2, (y + y2) // 2, " ".join(texts)))
+
+            # Fallback: match rows by first word if phrase rows are incomplete
+            if len(matches) <= index:
+                first_word = phrase_words[0]
+                row_centers = []
+                for row in rows:
+                    row_words = sorted(row["words"], key=lambda item: item["x"])
+                    for item in row_words:
+                        if item["word"] == first_word:
+                            row_centers.append(item)
+                            break
+                row_centers.sort(key=lambda item: (item["y"], item["x"]))
+                for item in row_centers:
+                    matches.append((item["x"] + item["w"] // 2, item["y"] + item["h"] // 2, item["word"]))
         else:
             for i, word in enumerate(data["text"]):
                 if word in texts:
                     x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
                     matches.append((x + w // 2, y + h // 2, word))
+
+        if len(matches) > 1:
+            matches.sort(key=lambda m: (m[1], m[0]))
 
         if len(matches) > index:
             center_x, center_y, word = matches[index]
@@ -355,6 +412,33 @@ def get_all_visible_text(log_widget=None):
     # else:
     #     log_msg("False", log_widget=log_widget)
         
+
+def click_union_stage_slot(slot_index, log_widget=None):
+    """Emergency coordinate-based click for a union event slot.
+
+    This is a shortcut that clicks one of the three visible union raid rows
+    at a hard-coded position relative to a 1920x1080 layout.
+    """
+    base_centers = [
+        (700, 450),
+        (700, 550),
+        (700, 650),
+    ]
+    if slot_index not in (0, 1, 2):
+        log_msg(f"Invalid union stage slot: {slot_index}", log_widget)
+        return False
+
+    screen_w, screen_h = pyautogui.size()
+    scale_x = screen_w / 1920.0
+    scale_y = screen_h / 1080.0
+    x = int(base_centers[slot_index][0] * scale_x)
+    y = int(base_centers[slot_index][1] * scale_y)
+
+    log_msg(f"Clicking union slot {slot_index + 1} at {x},{y}", log_widget)
+    pyautogui.click(x, y)
+    return True
+
+
 def wait(timeout=3.0, sleep=0.1, log_widget=None, attempts=2):
     time.sleep(SLEEP)
     misses = 0

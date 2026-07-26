@@ -132,6 +132,7 @@ IMAGES = {
     "return": get_img('KHR_return'),
     "return_raid": get_img('KHR_return_raid'),
     "return_raid_battle": get_img('KHR_return_raid_battle'),
+    "return_union_event": get_img('KHR_return_union_event'),
     "retry": get_img('KHR_retry'),
     "defeat": get_img('KHR_defeat_screen'),
     "defeat_elixir": get_img('KHR_defeat_continue'),

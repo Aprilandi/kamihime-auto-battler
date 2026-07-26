@@ -1,6 +1,6 @@
 import time
 import pyautogui
-from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina, post_battle, scroll_down
+from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina, post_battle, scroll_down, find_and_click_text, click_union_stage_slot
 from .battle import combat_sequence, ongoing_battle
 from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES, ALL_POSSIBLE_DIFFS
 
@@ -299,7 +299,6 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                 break
 
         # if next_page(IMAGES, log_widget=log_widget):
-        wait(log_widget=log_widget, timeout=1)
         if scroll_down(
                 scroll_x=680,
                 scroll_y=420,
@@ -315,7 +314,6 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                     wait(log_widget=log_widget)
                     # for in case of rank up
                     find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
-        time.sleep(0.5)
 
 
 def union_event(IMAGES, log_widget=None, index=0):
@@ -325,12 +323,35 @@ def union_event(IMAGES, log_widget=None, index=0):
         IMAGES: Dictionary of image paths
         log_widget: Optional log widget for displaying messages
     """
+    # array start from 0 and the frontend index start from 1
+    index_arr = index
     if index != 0:
-        index = index - 1
+        index_arr = index_arr - 1
 
+    # if user choose index 4-6 that means next page
     if index > 2:
-        index = index - 3
+        index_arr = index_arr - 3    
+
+    while state.get("running", False):
+        log_msg(f"Starting Union Event mode {index}", log_widget)
+        if index > 2:
+            next_page(IMAGES, log_widget=log_widget)
+            time.sleep(SLEEP)
+        if click_union_stage_slot(index_arr, log_widget=log_widget):
+            if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
+                find_and_click(IMAGES['return_union_event'], log_widget=log_widget, optional=True, timeout=2.0)
+        time.sleep(SLEEP)
+
+    return True
+    # Fallback: keep the OCR path in place for future correctness.
+    return find_and_click_text(
+        ['seraph', 'temperance'],
+        index=index,
+        log_widget=log_widget,
+        phrase=True,
+        optional=True,
+        timeout=3.0
+    )
     
-    log_msg(f"Starting Union Event mode {index}", log_widget)
     # Backend implementation to be added by user
     pass

@@ -55,6 +55,14 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
                 log_msg("Attack button found and clicked", log_widget)
                 break
             
+            if pyautogui.locateOnScreen(IMAGES['raid_event'], confidence=CONFIDENCE):
+                log_msg("Failsafe measure Raid ended.", log_widget)
+                return False
+            
+            if IMAGES.get("return_raid") and pyautogui.locateOnScreen(IMAGES["return_raid"], confidence=CONFIDENCE):
+                log_msg("Failsafe measure Raid ended. Returning to raid list", log_widget)
+                return True
+
             time.sleep(SLEEP)
             
         user_allows_rescue = state.get("rescue", True)
