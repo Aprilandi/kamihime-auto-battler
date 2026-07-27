@@ -324,21 +324,20 @@ def union_event(IMAGES, log_widget=None, index=0):
         log_widget: Optional log widget for displaying messages
     """
     # array start from 0 and the frontend index start from 1
-    index_arr = index
-    if index != 0:
-        index_arr = index_arr - 1
-
+    index_arr = index - 1
+    
     # if user choose index 4-6 that means next page
-    if index > 2:
+    if index > 3:
         index_arr = index_arr - 3    
 
     while state.get("running", False):
         log_msg(f"Starting Union Event mode {index}", log_widget)
-        if index > 2:
+        if index > 3:
             next_page(IMAGES, log_widget=log_widget)
             time.sleep(SLEEP)
-        if click_union_stage_slot(index_arr, log_widget=log_widget):
-            if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
+        if click_union_stage_slot(index_arr, log_widget=log_widget) is True:
+            check_stamina(IMAGES, log_widget=log_widget)
+            if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is True:
                 find_and_click(IMAGES['return_union_event'], log_widget=log_widget, optional=True, timeout=2.0)
         time.sleep(SLEEP)
 

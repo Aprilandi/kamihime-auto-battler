@@ -436,6 +436,12 @@ def click_union_stage_slot(slot_index, log_widget=None):
 
     log_msg(f"Clicking union slot {slot_index + 1} at {x},{y}", log_widget)
     pyautogui.click(x, y)
+    
+    wait(log_widget=log_widget)
+
+    if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
+        return False
+     
     return True
 
 

@@ -32,9 +32,11 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
         if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
             log_msg("Raid already ended - OK button found.", log_widget=log_widget)
             find_and_click(IMAGES['ok'], log_widget=log_widget)
+            wait(log_widget=log_widget)
+            time.sleep(1)
             # Pop up raid already ended in battle (when successfully entered the battle where there is still the animation and the boss has already died before you can do anything)
             if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE) is False:
-                return False                
+                return False
 
         # check_stamina(IMAGES, log_widget=log_widget)
 
