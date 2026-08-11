@@ -116,6 +116,7 @@ ALL_POSSIBLE_DIFFS = DIFFICULTIES + PHANTOM_DIFFICULTIES
 
 IMAGES = {
     "story_start": get_img('KHR_gems(start)'),
+    "back": get_img('KHR_back'),
     "skip": get_img('KHR_skip'),
     "skip_confirm": get_img('KHR_skip_confirmation'),
     "support": get_img('KHR_support'),

@@ -109,57 +109,62 @@ def episode_rush(IMAGES, log_widget=None):
             episode1 = True
             episode2 = True
 
-            while state.get("running", False):
-                if find_and_click(IMAGES['cancel'], optional=True):
-                    log_msg("Countermeasure loading too long already completed episode")
-                
-                if find_and_click(IMAGES['ep_encounter'], log_widget=log_widget, optional=True, confidence=0.99) and encounter:
-                    if find_and_click(IMAGES['cancel'], optional=True, log_widget=log_widget, timeout=3.0):
-                        encounter = False
-                        log_msg("Encounter already completed. Skipping...", log_widget)
-                    else:
-                        log_msg("Found the encounter episode", log_widget)
-                        break
-                        
-                time.sleep(SLEEP)
-
-                if find_and_click(IMAGES['ep_1'], log_widget=log_widget, optional=True, confidence=0.99) and episode1:
-                    if find_and_click(IMAGES['ok'], optional=True, timeout=3.0):
-                        log_msg("Episode 1 requirements unmet. Skipping...", log_widget)
-                        episode1 = False
-                    else:
-                        log_msg("Found the first episode (Ability unlocked)", log_widget)
-                        branch = True
-                        break
+            while state.get("running", False) and (encounter or episode1 or episode2):
+                while state.get("running", False):
+                    if find_and_click(IMAGES['cancel'], optional=True):
+                        log_msg("Countermeasure loading too long already completed episode")
                     
-                time.sleep(SLEEP)
+                    if pyautogui.locateOnScreen(IMAGES['ep_encounter'], confidence=0.99) and encounter:
+                        find_and_click(IMAGES['ep_encounter'], log_widget=log_widget, confidence=0.99)
+                        encounter = False
+                        if find_and_click(IMAGES['cancel'], optional=True, log_widget=log_widget, timeout=3.0):
+                            log_msg("Encounter already completed. Skipping...", log_widget=log_widget)
+                        else:
+                            log_msg("Found the encounter episode", log_widget)
+                            break
+                            
 
-                if find_and_click(IMAGES['ep_2'], log_widget=log_widget, optional=True, confidence=0.99) and episode2:
-                    if find_and_click(IMAGES['ok'], optional=True, timeout=3.0):
-                        log_msg("Episode 2 requirements unmet. Skipping...", log_widget)
+                    if find_and_click(IMAGES['ep_1'], log_widget=log_widget, optional=True, confidence=0.99) and episode1:
+                        episode1 = False
+                        if find_and_click(IMAGES['ok'], optional=True, timeout=3.0):
+                            log_msg("Episode 1 requirements unmet. Skipping...", log_widget)
+                        elif find_and_click(IMAGES['cancel'], optional=True, log_widget=log_widget, timeout=3.0):
+                            log_msg("Episode 1 already completed. Skipping...", log_widget=log_widget)
+                        else:
+                            log_msg("Found the first episode (Ability unlocked)", log_widget)
+                            branch = True
+                            break
+                        
+
+                    if find_and_click(IMAGES['ep_2'], log_widget=log_widget, optional=True, confidence=0.99) and episode2:
                         episode2 = False
-                    else:
-                        log_msg("Found the second episode (Magic Jewel)", log_widget)
-                        branch = True
-                        break
+                        if find_and_click(IMAGES['ok'], optional=True, timeout=3.0):
+                            log_msg("Episode 2 requirements unmet. Skipping...", log_widget)
+                        elif find_and_click(IMAGES['cancel'], optional=True, log_widget=log_widget, timeout=3.0):
+                            log_msg("Episode 2 already completed. Skipping...", log_widget=log_widget)
+                        else:
+                            log_msg("Found the second episode (Magic Jewel)", log_widget)
+                            branch = True
+                            break
+                    
+                    time.sleep(SLEEP)
                 
-                time.sleep(SLEEP)
-            
-            find_and_click(IMAGES['skip'], log_widget=log_widget)
-            
-            find_and_click(IMAGES['skip_confirm'], log_widget=log_widget)
-            
-            if branch:
-                find_and_click(IMAGES['ep_skip'], log_widget=log_widget, robust=False)
+                find_and_click(IMAGES['skip'], log_widget=log_widget)
+                
+                find_and_click(IMAGES['skip_confirm'], log_widget=log_widget)
+                
+                if branch:
+                    find_and_click(IMAGES['ep_skip'], log_widget=log_widget, robust=False)
+                    
+                    find_and_click(IMAGES['ok'], log_widget=log_widget)
                 
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
                 
-            find_and_click(IMAGES['ep_return'], log_widget=log_widget, robust=False)
-            
-            find_and_click(IMAGES['ok'], log_widget=log_widget)
+                time.sleep(SLEEP)
             
             time.sleep(SLEEP)
-                
+            
+            find_and_click(IMAGES['back'], log_widget=log_widget)
         else:
             log_msg("All episode has been completed.", log_widget)
             break
