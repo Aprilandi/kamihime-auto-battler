@@ -40,6 +40,7 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
 
         # check_stamina(IMAGES, log_widget=log_widget)
 
+        in_battle_stuck_check = time.time()
         while state.get("running", False):
             if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
                 log_msg("Raid already ended - OK button found", log_widget)
@@ -65,6 +66,10 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
                 log_msg("Failsafe measure Raid ended. Returning to raid list", log_widget)
                 return True
 
+            if (time.time() - in_battle_stuck_check) >= 30:
+                find_and_click(IMAGES['reload'], optional=True, log_widget=log_widget)
+                in_battle_stuck_check = time.time()
+                
             time.sleep(SLEEP)
             
         user_allows_rescue = state.get("rescue", True)
@@ -95,11 +100,11 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
             log_msg("Defeated detected cancelling the revive...", log_widget)
             # if find_and_click(IMAGES["cancel"], log_widget=log_widget):
             while state.get("running", False) and pyautogui.locateOnScreen(IMAGES['defeat_elixir'], confidence=CONFIDENCE):
-                if find_text(['continue the battle'], log_widget=log_widget) is False:
+                time.sleep(SLEEP)
+                if find_text(['continue'], log_widget=log_widget) is False:
                     break
                 else:
                     find_and_click(IMAGES['cancel'], robust=False, optional=True, log_widget=log_widget)
-                time.sleep(SLEEP)
             if rescue_active or host_raid:
                 log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
                 # find_and_click(IMAGES['cancel'], log_widget=log_widget)
@@ -127,7 +132,7 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
             log_msg("Battle ended - Return Raid button found", log_widget)
             break
         
-        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
+        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) and not pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             if find_text(['subjugation?'], log_widget=log_widget):
                 log_msg("Rescue available, completing...", log_widget)
                 find_and_click(IMAGES['ok'], log_widget=log_widget, robust=False, optional=True)
