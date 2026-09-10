@@ -15,7 +15,12 @@ pytesseract.pytesseract.tesseract_cmd = resource_path(
 
 
 # Shared state and common constants
-state = {"running": False, "raid_settings": {}, "completed_raids": {}}
+state = {
+    "running": False,
+    "raid_settings": {},
+    "completed_raids": {},
+    "error_detected": False,
+}
 CONFIDENCE = 0.8
 SLEEP = 1.0
 
@@ -35,6 +40,53 @@ def log_msg(message, log_widget=None):
         except Exception:
             # avoid noisy exceptions from UI
             pass
+
+
+def monitor_error(IMAGES, interval=1.0, log_widget=None):
+    """Stop the active flow when the global error popup is detected."""
+    log_msg("Monitor started.", log_widget)
+    while state.get("running", False):
+        try:
+            cancel_image = IMAGES.get("cancel")
+            cancel_found = bool(
+                cancel_image
+                and pyautogui.locateOnScreen(cancel_image, confidence=CONFIDENCE)
+            )
+            if not cancel_found:
+                log_msg("Monitor: Cancel not found.", log_widget)
+            else:
+                log_msg("Monitor: Cancel found; checking OCR.", log_widget)
+                screenshot = pyautogui.screenshot()
+                screen_text = pytesseract.image_to_string(screenshot).lower()
+                log_msg(
+                    f"Error monitor OCR: {screen_text.strip() or '<no text>'}",
+                    log_widget,
+                )
+
+            if cancel_found and "error" in screen_text:
+                state["error_detected"] = True
+                state["running"] = False
+                log_msg("Stopping the active flow...", log_widget)
+                return
+        except Exception as exc:
+            log_msg(f"Monitor exception: {exc}", log_widget)
+
+        time.sleep(interval)
+
+
+def dismiss_error(IMAGES, log_widget=None):
+    """Dismiss the detected error popup after the flow thread has stopped."""
+    cancel_image = IMAGES.get("cancel")
+    if not cancel_image:
+        return False
+
+    button = pyautogui.locateOnScreen(cancel_image, confidence=CONFIDENCE)
+    if not button:
+        return False
+
+    pyautogui.click(pyautogui.center(button))
+    log_msg("Dismissed the error popup.", log_widget)
+    return True
 
 
 def _inc_loop(name, log_widget=None):
@@ -141,8 +193,10 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
                 pyautogui.click(btn.left + 5, btn.top + 5)
                 clicked = True
 
+            time.sleep(0.5)
+
             found_still = pyautogui.locateOnScreen(image, region=region, confidence=confidence)
-                    
+            
             if not found_still:
                 log_msg(f"Button {name} disappeared, assumed success.", log_widget)
                 wait(log_widget=log_widget)
@@ -269,7 +323,7 @@ def scroll_down(list_region, log_widget=None, scroll_x = 600, scroll_y = 420):
     before = pyautogui.screenshot()
 
     pyautogui.moveTo(scroll_x, scroll_y)
-    pyautogui.scroll(-150)
+    pyautogui.scroll(-120)
     time.sleep(SLEEP)
     
     after = pyautogui.screenshot()
@@ -483,7 +537,7 @@ def check_stamina(IMAGES, log_widget=None, timeout=1.5):
 
         if (IMAGES.get('stamina_check') and pyautogui.locateOnScreen(IMAGES['stamina_check'], confidence=CONFIDENCE)) or (IMAGES.get('bp_check') and pyautogui.locateOnScreen(IMAGES['bp_check'], confidence=CONFIDENCE)):
             log_msg("Stamina or BP low detected", log_widget)
-            if find_and_click(IMAGES['stamina_use'], log_widget=log_widget) is True:
+            if find_and_click(IMAGES['stamina_use'], log_widget=log_widget, robust=False) is True:
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
                 return True
 

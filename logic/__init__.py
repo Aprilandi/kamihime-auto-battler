@@ -11,13 +11,15 @@ from .core import (
     test_function,
     prevent_sleep,
     allow_sleep,
+    monitor_error,
+    dismiss_error,
     find_and_click_all,
     find_text,
     check_stamina,
     wait
 )
 from .battle import combat_sequence, wait_for_battle_end, ongoing_battle
-from .flows import farm_loop, quest_rush, epic_quest_rush, raid_host, episode_rush, farm_raid, union_event
+from .flows import farm_loop, quest_rush, epic_quest_rush, raid_host, episode_rush, farm_raid, union_event, recover_flow_start
 
 # Re-export public API for backwards compatibility with existing imports
 __all__ = [
@@ -38,6 +40,8 @@ __all__ = [
     "screenshots_are_same",
     "prevent_sleep",
     "allow_sleep",
+    "monitor_error",
+    "dismiss_error",
     "combat_sequence",
     "wait_for_battle_end",
     "check_stamina",
@@ -49,5 +53,6 @@ __all__ = [
     "episode_rush",
     "farm_raid",
     "union_event",
+    "recover_flow_start",
     "wait"
 ]

@@ -92,6 +92,7 @@ def start_mode(mode_func, mode_name, *args):
     # Only allow starting when nothing else is running
     if not logic.state.get("running", False):
         logic.state["running"] = True
+        logic.state["error_detected"] = False
         logic.state["active_sequence"] = mode_name
         status_lbl.configure(text="RUNNING", text_color="green")
         # disable other buttons
@@ -104,11 +105,20 @@ def start_mode(mode_func, mode_name, *args):
 
         t = threading.Thread(target=mode_func, args=args, daemon=True)
         t.start()
+        threading.Thread(
+            target=logic.monitor_error,
+            args=(IMAGES, 1.0, detector_log),
+            daemon=True,
+        ).start()
 
         # watcher thread to re-enable buttons and clear state when the mode finishes
         def _watch():
             t.join()
+            if logic.state.get("error_detected", False):
+                logic.dismiss_error(IMAGES, log)
+                logic.recover_flow_start(IMAGES, mode_name, log)
             logic.state["running"] = False
+            logic.state["error_detected"] = False
             logic.state["active_sequence"] = None
             # allow normal sleep behavior again
             try:
@@ -556,8 +566,13 @@ if diffs_for_all:
     diff_apply_btn = ctk.CTkButton(controls_frame, text="Apply Diff To All", width=160, command=lambda: toggle_specific_diff(diff_menu.get()))
     diff_apply_btn.pack(side="left")
 
+ctk.CTkLabel(app, text="Flow Log", anchor="w").pack(fill="x", padx=10)
 log = ctk.CTkTextbox(app, height=100, font=("Arial", 10))
 log.pack(fill="x", padx=10, pady=5)
+
+ctk.CTkLabel(app, text="Monitor Log", anchor="w").pack(fill="x", padx=10)
+detector_log = ctk.CTkTextbox(app, height=100, font=("Arial", 10))
+detector_log.pack(fill="x", padx=10, pady=5)
 
 # Start an autosave thread to persist completed_raids and raid_settings periodically.
 def _autosave_loop(interval=5.0):

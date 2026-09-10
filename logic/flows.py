@@ -2,7 +2,23 @@ import time
 import pyautogui
 from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina, post_battle, scroll_down, find_and_click_text, click_union_stage_slot
 from .battle import combat_sequence, ongoing_battle
-from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES, ALL_POSSIBLE_DIFFS
+from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES, ALL_POSSIBLE_DIFFS, ELEMENTS, get_img
+
+
+def recover_flow_start(IMAGES, mode_name, log_widget=None):
+    """Placeholder for returning each flow to its configured starting screen."""
+    if mode_name == "farm_raid":
+        log_msg("Recovery placeholder: navigate to Available Raid Battle.", log_widget)
+        find_and_click(
+            IMAGES["raid_quest_available"],
+            log_widget=log_widget,
+            robust=False
+        )
+        return lambda: farm_raid(IMAGES, ELEMENTS, get_img, log_widget)
+    elif mode_name == "raid_host":
+        log_msg("Recovery placeholder: navigate to Quest -> Raid Battle.", log_widget)
+    else:
+        log_msg(f"Recovery placeholder: navigate to the {mode_name} starting screen.", log_widget)
 
 def farm_loop(IMAGES, log_widget=None):
     """Main farming loop to run battles continuously.
@@ -291,7 +307,11 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                 
                 if find_and_click_all(raid_image, confidence=0.95, log_widget=log_widget) is True:
                     if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
+                        # when battle ran out of time, click ok just throws you back to raid list
+                        if pyautogui.locateOnScreen(IMAGES['raid_event']):
+                            break
                         find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True, timeout=2.0)
+                        # fail safe measure if stuck in post battle credit
                         while pyautogui.locateOnScreen(IMAGES['raid_event']) is False and state.get("running", False):
                             post_battle(IMAGES, log_widget=log_widget, confidence=0.85)
                             find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True)
@@ -307,7 +327,15 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
         if scroll_down(
                 scroll_x=680,
                 scroll_y=420,
-                list_region=(493, 270, 375, 300)  # x, y, w, h of just the game list area
+                # this is coordinate of the monitor to check if the page already scrolled down at the end
+                # previous one was to take an screenshot of the entire screen to check if it is at the end of list (there is no changes on the screen before and after)
+                # but if there is an active raid that you participate in there are animation text "In Battle!" constantly moving
+                # hence makes it return True (even tho you are already at the end of the list)
+                # so i added this coordinate to exclude 3 raid list from the top (because the game only allows you to join 3 raid at the same time)
+                # in order to get the coordinate run this code python -c "import pyautogui; pyautogui.displayMousePosition()"
+                # it will show your cursor coordinate on terminal or cmd
+                # list_region=(652, 634, 1138 - 652, 725 - 534)  # x, y, w, h of just the game list area
+                list_region=(652, 634, 300, 200)  # x, y, w, h of just the game list area
             ):
             log_msg("Navigated to next page of raids", log_widget)
         else:
