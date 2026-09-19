@@ -127,6 +127,7 @@ IMAGES = {
     "rescue_prompt": get_img('KHR_rescue_prompt'),
     "condition": get_img('KHR_condition'),
     "challenge": get_img('KHR_challenge'),
+    "close": get_img('KHR_close'),
     "cancel": get_img('KHR_cancel'),
     "ok": get_img('KHR_ok'),
     "ok_inactive": get_img('KHR_ok_inactive'),

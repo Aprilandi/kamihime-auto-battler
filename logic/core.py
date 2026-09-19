@@ -20,6 +20,7 @@ state = {
     "raid_settings": {},
     "completed_raids": {},
     "error_detected": False,
+    "current_function": None,
 }
 CONFIDENCE = 0.8
 SLEEP = 1.0
@@ -47,26 +48,24 @@ def monitor_error(IMAGES, interval=1.0, log_widget=None):
     log_msg("Monitor started.", log_widget)
     while state.get("running", False):
         try:
-            cancel_image = IMAGES.get("cancel")
-            cancel_found = bool(
-                cancel_image
-                and pyautogui.locateOnScreen(cancel_image, confidence=CONFIDENCE)
+            close_image = IMAGES.get("close")
+            close_image = bool(
+                close_image
+                and pyautogui.locateOnScreen(close_image, confidence=CONFIDENCE)
             )
-            if not cancel_found:
-                log_msg("Monitor: Cancel not found.", log_widget)
+            screen_text = ""
+            if not close_image:
+                log_msg("Monitor: Close not found.", log_widget)
             else:
                 log_msg("Monitor: Cancel found; checking OCR.", log_widget)
                 screenshot = pyautogui.screenshot()
                 screen_text = pytesseract.image_to_string(screenshot).lower()
-                log_msg(
-                    f"Error monitor OCR: {screen_text.strip() or '<no text>'}",
-                    log_widget,
-                )
 
-            if cancel_found and "error" in screen_text:
+            if close_image and "an error" in screen_text:
+                find_and_click(IMAGES['close'], log_widget=log_widget)
                 state["error_detected"] = True
                 state["running"] = False
-                log_msg("Stopping the active flow...", log_widget)
+                log_msg(f"Stopping the active flow: {state.get('current_function')}", log_widget)
                 return
         except Exception as exc:
             log_msg(f"Monitor exception: {exc}", log_widget)
@@ -74,19 +73,9 @@ def monitor_error(IMAGES, interval=1.0, log_widget=None):
         time.sleep(interval)
 
 
-def dismiss_error(IMAGES, log_widget=None):
-    """Dismiss the detected error popup after the flow thread has stopped."""
-    cancel_image = IMAGES.get("cancel")
-    if not cancel_image:
-        return False
-
-    button = pyautogui.locateOnScreen(cancel_image, confidence=CONFIDENCE)
-    if not button:
-        return False
-
-    pyautogui.click(pyautogui.center(button))
-    log_msg("Dismissed the error popup.", log_widget)
-    return True
+def get_current_function():
+    """Return the currently active flow function name."""
+    return state.get("current_function") or state.get("active_sequence")
 
 
 def _inc_loop(name, log_widget=None):
@@ -243,44 +232,44 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
             confidence=CONFIDENCE
         )
         
-        if is_busy is None:
-            log_msg(f"Found available raid at {raid_box.left}, {raid_box.top}. Clicking...", log_widget)
-            wait(log_widget=log_widget)
-            # Click the center of the available raid
-            pyautogui.click(pyautogui.center(raid_box))
-            while state.get('running', False):
-                
-                check_stamina(IMAGES, log_widget=log_widget, timeout=0.5)
-                
-                if find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True, confidence=0.99) is True:
-                    log_msg("Only 3 raid battle at once allowed. Waiting...", log_widget)
-                    return False
+        # if is_busy is None:
+        log_msg(f"Found available raid at {raid_box.left}, {raid_box.top}. Clicking...", log_widget)
+        wait(log_widget=log_widget)
+        # Click the center of the available raid
+        pyautogui.click(pyautogui.center(raid_box))
+        while state.get('running', False):
+            
+            check_stamina(IMAGES, log_widget=log_widget, timeout=0.5)
+            
+            if find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True, confidence=0.99) is True:
+                log_msg("Only 3 raid battle at once allowed. Waiting...", log_widget)
+                return False
 
-                if find_and_click(IMAGES['batch'], log_widget=log_widget, optional=True):
-                    log_msg("Completing batch raid...", log_widget)
+            if find_and_click(IMAGES['batch'], log_widget=log_widget, optional=True):
+                log_msg("Completing batch raid...", log_widget)
 
-                    wait(log_widget=log_widget)
+                wait(log_widget=log_widget)
 
-                    # for in case of rank up
-                    find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
-                    pyautogui.click(pyautogui.center(raid_box))
+                # for in case of rank up
+                find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
+                pyautogui.click(pyautogui.center(raid_box))
 
-                if pyautogui.locateOnScreen(IMAGES['cancel'], confidence=CONFIDENCE) \
-                    and find_text(['an error'], log_widget=log_widget) is True \
-                    and not pyautogui.locateOnScreen(IMAGES['stamina_use'], confidence=CONFIDENCE) \
-                    and not pyautogui.locateOnScreen(IMAGES['batch'], confidence=CONFIDENCE):
-                    find_and_click(IMAGES['cancel'], log_widget=log_widget)
-                    find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True)
-                    find_and_click(IMAGES['start_game'], log_widget=log_widget, optional=True)
-                    find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget)
-                    return False
+            if pyautogui.locateOnScreen(IMAGES['cancel'], confidence=CONFIDENCE) \
+                and find_text(['an error'], log_widget=log_widget) is True \
+                and not pyautogui.locateOnScreen(IMAGES['stamina_use'], confidence=CONFIDENCE) \
+                and not pyautogui.locateOnScreen(IMAGES['batch'], confidence=CONFIDENCE):
+                find_and_click(IMAGES['cancel'], log_widget=log_widget)
+                find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True)
+                find_and_click(IMAGES['start_game'], log_widget=log_widget, optional=True)
+                find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget)
+                return False
 
-                if pyautogui.locateOnScreen(IMAGES['support'], confidence=CONFIDENCE):
-                    return True
+            if pyautogui.locateOnScreen(IMAGES['support'], confidence=CONFIDENCE):
+                return True
 
-                time.sleep(SLEEP)
-        else:
-            log_msg("Raid found, but it is already 'In Battle'. Skipping...", log_widget)
+            time.sleep(SLEEP)
+        # else:
+            # log_msg("Raid found, but it is already 'In Battle'. Skipping...", log_widget)
 
     log_msg("All visible raids are currently occupied.", log_widget)
     return False

@@ -94,6 +94,7 @@ def start_mode(mode_func, mode_name, *args):
         logic.state["running"] = True
         logic.state["error_detected"] = False
         logic.state["active_sequence"] = mode_name
+        logic.state["current_function"] = mode_func.__name__
         status_lbl.configure(text="RUNNING", text_color="green")
         # disable other buttons
         _set_mode_buttons_state("disabled")
@@ -115,11 +116,19 @@ def start_mode(mode_func, mode_name, *args):
         def _watch():
             t.join()
             if logic.state.get("error_detected", False):
-                logic.dismiss_error(IMAGES, log)
-                logic.recover_flow_start(IMAGES, mode_name, log)
+                logic.state["running"] = True
+                flow_name = logic.state.get("active_sequence") or logic.state.get("current_function")
+                recovery = logic.recover_flow_start(IMAGES, flow_name, ELEMENTS, get_img, log)
+                if callable(recovery):
+                    logic.state["error_detected"] = False    
+                    recovery()
+                else:
+                    logic.state['running'] = False
+                    
             logic.state["running"] = False
             logic.state["error_detected"] = False
             logic.state["active_sequence"] = None
+            logic.state["current_function"] = None
             # allow normal sleep behavior again
             try:
                 logic.allow_sleep()

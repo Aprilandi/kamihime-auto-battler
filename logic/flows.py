@@ -5,27 +5,33 @@ from .battle import combat_sequence, ongoing_battle
 from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES, ALL_POSSIBLE_DIFFS, ELEMENTS, get_img
 
 
-def recover_flow_start(IMAGES, mode_name, log_widget=None):
-    """Placeholder for returning each flow to its configured starting screen."""
-    if mode_name == "farm_raid":
+def recover_flow_start(IMAGES, mode_name=None, elements=None, get_img_fn=None, log_widget=None):
+    """Recovery hook for returning the active flow to its known start screen."""
+    flow_name = mode_name or state.get("current_function") or state.get("active_sequence")
+    log_msg(f"Current flow: {flow_name}.", log_widget=log_widget)
+
+    if flow_name == "farm_raid":
         log_msg("Recovery placeholder: navigate to Available Raid Battle.", log_widget)
-        find_and_click(
-            IMAGES["raid_quest_available"],
-            log_widget=log_widget,
-            robust=False
-        )
-        return lambda: farm_raid(IMAGES, ELEMENTS, get_img, log_widget)
-    elif mode_name == "raid_host":
+        find_and_click(IMAGES["raid_quest_available"], log_widget=log_widget)
+        return lambda: farm_raid(IMAGES, elements or [], get_img_fn or get_img, log_widget)
+
+    if flow_name == "raid_host":
         log_msg("Recovery placeholder: navigate to Quest -> Raid Battle.", log_widget)
-    else:
-        log_msg(f"Recovery placeholder: navigate to the {mode_name} starting screen.", log_widget)
+        if IMAGES.get("quest"):
+            find_and_click(IMAGES["quest"], log_widget=log_widget, robust=False)
+        if IMAGES.get("raid_quest"):
+            find_and_click(IMAGES["raid_quest"], log_widget=log_widget, robust=False)
+        return lambda: raid_host(IMAGES, elements or [], get_img_fn or get_img, log_widget)
+
+    log_msg(f"Recovery placeholder: navigate to the {flow_name} starting screen.", log_widget)
+    return None
 
 def farm_loop(IMAGES, log_widget=None):
     """Main farming loop to run battles continuously.
     """
     loop_count = 0
     log_msg("Starting farming loop", log_widget)
-    while state.get("running", False):
+    while state.get("running", False) and state.get("error_detected", False) is False:
         if find_and_click(IMAGES.get('retry'), log_widget=log_widget, robust=False):
 
             check_stamina(IMAGES, log_widget=log_widget)
@@ -41,12 +47,12 @@ def quest_rush(IMAGES, log_widget=None):
     """Quest Rush mode farming loop.
     """
     log_msg("Starting Quest Rush mode", log_widget)
-    while state.get("running",  False):
+    while state.get("running",  False) and state.get("error_detected", False) is False:
         if find_and_click(IMAGES['story_start'], log_widget=log_widget, timeout=5.0, optional=True, robust=False):
             new_chapter = False
             find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget)
             check_stamina(IMAGES, log_widget=log_widget)
-            while state.get("running", False):
+            while state.get("running", False) and state.get("error_detected", False) is False:
                 # main loop inside the episode
                 if find_and_click(IMAGES['support'], log_widget=log_widget, optional=True, robust=False):
                     find_and_click(IMAGES['go_quest'], log_widget=log_widget)
@@ -86,14 +92,14 @@ def epic_quest_rush(IMAGES, log_widget=None):
     """Epic Quest Rush mode farming loop.
     """
     log_msg("Starting Epic Quest Rush mode", log_widget)
-    while state.get("running", False):
+    while state.get("running", False) and state.get("error_detected", False) is False:
         if find_and_click(IMAGES.get('story_start'), log_widget=log_widget, timeout=5.0, optional=True):
             loop_count = _inc_loop("epic_quest_rush", log_widget)
             
             # time.sleep(SLEEP)
             check_stamina(IMAGES, log_widget=log_widget)
 
-            while state.get("running", False):
+            while state.get("running", False) and state.get("error_detected", False) is False:
                 if IMAGES.get('skip') and pyautogui.locateOnScreen(IMAGES['skip'], confidence=CONFIDENCE):
                     log_msg("Branch: Story, skipping...", log_widget)
                     find_and_click(IMAGES['skip'], log_widget=log_widget)
@@ -116,7 +122,7 @@ def epic_quest_rush(IMAGES, log_widget=None):
 def episode_rush(IMAGES, log_widget=None):
     log_msg("Starting episode rush", log_widget)
     
-    while state.get("running", False):
+    while state.get("running", False) and state.get("error_detected", False) is False:
         if find_and_click(IMAGES['ep_start'], log_widget=log_widget, optional=True, timeout=4.0):
         
             log_msg("Finding the option", log_widget)
@@ -125,8 +131,8 @@ def episode_rush(IMAGES, log_widget=None):
             episode1 = True
             episode2 = True
 
-            while state.get("running", False) and (encounter or episode1 or episode2):
-                while state.get("running", False):
+            while state.get("running", False) and (encounter or episode1 or episode2) and state.get("error_detected", False) is False:
+                while state.get("running", False) and state.get("error_detected", False) is False:
                     if find_and_click(IMAGES['cancel'], optional=True):
                         log_msg("Countermeasure loading too long already completed episode")
                     
@@ -217,7 +223,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
             #     log_msg(f"Skipping already completed raid: {element} - {difficulty}", log_widget)
             #     continue
 
-            while state.get("running", False):
+            while state.get("running", False) and state.get("error_detected", False) is False:
                 
                 log_msg("Handling raid entry", log_widget)
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
@@ -283,7 +289,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
 def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
     log_msg("Starting Raid Farm", log_widget)
 
-    while state.get("running", False):
+    while state.get("running", False) and state.get("error_detected", False) is False:
         # New scanning order for farm raid: iterate difficulties first, then elements.
         # This scans all elements for a given difficulty before moving to the next
         # difficulty which can be useful when farming a specific difficulty across
@@ -363,7 +369,7 @@ def union_event(IMAGES, log_widget=None, index=0):
     if index > 3:
         index_arr = index_arr - 3    
 
-    while state.get("running", False):
+    while state.get("running", False) and state.get("error_detected", False) is False:
         log_msg(f"Starting Union Event mode {index}", log_widget)
         if index > 3:
             next_page(IMAGES, log_widget=log_widget)

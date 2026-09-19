@@ -41,7 +41,7 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
         # check_stamina(IMAGES, log_widget=log_widget)
 
         in_battle_stuck_check = time.time()
-        while state.get("running", False):
+        while state.get("running", False) and state.get("error_detected", False) is False:
             if find_and_click(IMAGES['ok'], optional=True, log_widget=log_widget):
                 log_msg("Raid already ended - OK button found", log_widget)
                 find_and_click(IMAGES['reload'], optional=True, log_widget=log_widget)
@@ -95,11 +95,11 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
 
     start_time = time.time()
 
-    while state.get("running", False):
+    while state.get("running", False) and state.get("error_detected", False) is False:
         if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             log_msg("Defeated detected cancelling the revive...", log_widget)
             # if find_and_click(IMAGES["cancel"], log_widget=log_widget):
-            while state.get("running", False) and pyautogui.locateOnScreen(IMAGES['defeat_elixir'], confidence=CONFIDENCE):
+            while state.get("running", False) and pyautogui.locateOnScreen(IMAGES['defeat_elixir'], confidence=CONFIDENCE) and state.get("error_detected", False) is False:
                 time.sleep(SLEEP)
                 if find_text(['continue'], log_widget=log_widget) is False:
                     break
@@ -149,7 +149,7 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
 
                 if find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget):
                     log_msg("Battle either ended or connection lost...", log_widget=log_widget)
-                    while state.get("running", False):
+                    while state.get("running", False) and state.get("error_detected", False) is False:
                         find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True) # If there are scoreboard
                         if IMAGES.get('return_raid_battle') and pyautogui.locateOnScreen(IMAGES['return_raid_battle'], confidence=CONFIDENCE):
                             log_msg("Battle already ended, returning to raid quest list", log_widget=log_widget)
@@ -176,7 +176,7 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
 def ongoing_battle(IMAGES, log_widget=None, timeout=1.5):
     start_time = time.time()
     
-    while state.get("running", False):
+    while state.get("running", False) and state.get("error_detected", False) is False:
         elapsed = time.time() - start_time 
         if elapsed >= timeout:
             log_msg("No ongoing battle detected", log_widget)
