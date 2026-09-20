@@ -228,7 +228,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                 log_msg("Handling raid entry", log_widget)
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
                 
-                if find_and_click(raid_image, confidence=0.95, log_widget=log_widget, optional=True, robust=False):
+                if find_and_click(raid_image, confidence=0.90, log_widget=log_widget, optional=True, robust=False, source_img=True, crop=(0, 14, 0, 0)):
                     if ongoing_battle(IMAGES, log_widget=log_widget):
                         continue
                     
@@ -311,7 +311,7 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
 
                 raid_image = get_img(f"KHR_{element}_{difficulty}")
                 
-                if find_and_click_all(raid_image, confidence=0.95, log_widget=log_widget) is True:
+                if find_and_click_all(raid_image, confidence=0.90, log_widget=log_widget, source_img=True) is True:
                     if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
                         # when battle ran out of time, click ok just throws you back to raid list
                         if pyautogui.locateOnScreen(IMAGES['raid_event']):

@@ -1,5 +1,5 @@
 import customtkinter as ctk
-import threading, logic, os, keyboard, config
+import threading, logic, os, keyboard, config, pyautogui
 
 # Use configuration module (single source of truth for images and lists)
 ELEMENTS = config.ELEMENTS
@@ -117,10 +117,21 @@ def start_mode(mode_func, mode_name, *args):
             t.join()
             if logic.state.get("error_detected", False):
                 logic.state["running"] = True
+                logic.state["error_detected"] = False
+
+                threading.Thread(
+                    target=logic.monitor_error,
+                    args=(IMAGES, 1.0, detector_log),
+                    daemon=True,
+                ).start()
+
+                while logic.state.get("running", False) and not pyautogui.locateOnScreen(IMAGES["quest"], confidence=0.80):
+                    pyautogui.click(x=1362, y=180)
+                    time.sleep(1)
+
                 flow_name = logic.state.get("active_sequence") or logic.state.get("current_function")
                 recovery = logic.recover_flow_start(IMAGES, flow_name, ELEMENTS, get_img, log)
                 if callable(recovery):
-                    logic.state["error_detected"] = False    
                     recovery()
                 else:
                     logic.state['running'] = False
@@ -314,7 +325,7 @@ element_parent_vars = {}
 element_all_btns = {}
 
 # Only released Cataclysm raids should be selectable. Add new elements here as they go live.
-RELEASED_NEW_DIFFICULTY = {"fire"}
+RELEASED_NEW_DIFFICULTY = {"fire", "water", "thunder", "dark"}
 
 def _is_new_difficulty_disabled(el, diff):
     # return False # if the new difficulty already fully released return false.

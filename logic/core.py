@@ -127,7 +127,7 @@ except Exception:
         return False
 
 
-def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None, robust=True, offset=0):
+def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None, robust=True, offset=0, source_img=False, crop=(0, 0, 0, 0)):
     """Find an image on screen and click it.
     """
     if not image:
@@ -140,12 +140,30 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
         name = str(image)
         
     log_msg(f"Searching for {name}", log_widget)
+    
+    if source_img is True:
+        target_img = Image.open(image).resize((132, 93), Image.Resampling.LANCZOS)
+    else:
+        target_img = (
+            image if isinstance(image, Image.Image) else Image.open(image)
+        )
 
+    width, height = target_img.size
+    
+    cut_left, cut_top, cut_right, cut_bottom = crop
+    
+    left = cut_left
+    upper = cut_top
+    right = width - cut_right
+    lower = height - cut_bottom
+    
+    target_img = target_img.crop((left, upper, right, lower))
+    
     start_time = time.time()
     clicked = False
     
     while state.get("running", False): 
-        btn = pyautogui.locateOnScreen(image, confidence=confidence)
+        btn = pyautogui.locateOnScreen(target_img, confidence=confidence)
 
         if btn and not robust:
             log_msg(f"Found {name} (Non Robust), clicking", log_widget) 
@@ -184,7 +202,7 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
 
             time.sleep(0.5)
 
-            found_still = pyautogui.locateOnScreen(image, region=region, confidence=confidence)
+            found_still = pyautogui.locateOnScreen(target_img, region=region, confidence=confidence)
             
             if not found_still:
                 log_msg(f"Button {name} disappeared, assumed success.", log_widget)
@@ -205,17 +223,25 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
         time.sleep(0.1)
 
 
-def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None):
+def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None, source_img=False):
     try:
         name = os.path.basename(image)
     except Exception:
         name = str(image)
         
     log_msg(f"Searching for {name}", log_widget)
+    
+    if source_img is True:
+        # source image has different pixel then the displayed image
+        target_img = Image.open(image).resize(
+            (132, 93), Image.Resampling.LANCZOS
+        )
+    else:
+        target_img= image
 
     # 1. Find all instances of the raid banner
     # grayscale=True and confidence help with speed and slight color variations
-    all_raids = list(pyautogui.locateAllOnScreen(image, confidence=confidence))
+    all_raids = list(pyautogui.locateAllOnScreen(target_img, confidence=confidence))
     
     if not all_raids:
         log_msg("No raids found on screen.", log_widget)
@@ -269,7 +295,7 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
 
             time.sleep(SLEEP)
         # else:
-            # log_msg("Raid found, but it is already 'In Battle'. Skipping...", log_widget)
+        #     log_msg("Raid found, but it is already 'In Battle'. Skipping...", log_widget)
 
     log_msg("All visible raids are currently occupied.", log_widget)
     return False
