@@ -127,6 +127,18 @@ except Exception:
         return False
 
 
+    def _recover_from_pyautogui_failsafe(log_widget=None):
+        """Move the cursor away from a screen corner without using PyAutoGUI."""
+        try:
+            ctypes.windll.user32.SetCursorPos(100, 100)
+            log_msg("PyAutoGUI fail-safe triggered; cursor moved to a safe position. Retrying.", log_widget)
+            return True
+        except Exception as exc:
+            log_msg(f"Could not recover the cursor from PyAutoGUI fail-safe: {exc}", log_widget)
+            state["running"] = False
+            return False
+
+
 def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, log_widget=None, robust=True, offset=0, source_img=False, crop=(0, 0, 0, 0)):
     """Find an image on screen and click it.
     """
@@ -174,10 +186,19 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
                 target_y = center.y + offset
                 
                 pyautogui.click(target_x, target_y)
+            except pyautogui.FailSafeException:
+                if not _recover_from_pyautogui_failsafe(log_widget):
+                    return False
+                continue
             except Exception:
                 # fallback: click top-left of the located box
                 time.sleep(SLEEP)
-                pyautogui.click(btn.left + 5, btn.top + 5)
+                try:
+                    pyautogui.click(btn.left + 5, btn.top + 5)
+                except pyautogui.FailSafeException:
+                    if not _recover_from_pyautogui_failsafe(log_widget):
+                        return False
+                    continue
             log_msg(f"Clicked {name}", log_widget)
             wait(log_widget=log_widget)
             return True
@@ -195,9 +216,18 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
                 
                 pyautogui.click(target_x, target_y)
                 clicked = True
+            except pyautogui.FailSafeException:
+                if not _recover_from_pyautogui_failsafe(log_widget):
+                    return False
+                continue
             except Exception:
                 time.sleep(SLEEP)
-                pyautogui.click(btn.left + 5, btn.top + 5)
+                try:
+                    pyautogui.click(btn.left + 5, btn.top + 5)
+                except pyautogui.FailSafeException:
+                    if not _recover_from_pyautogui_failsafe(log_widget):
+                        return False
+                    continue
                 clicked = True
 
             time.sleep(0.5)
