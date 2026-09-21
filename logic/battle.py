@@ -99,12 +99,13 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
         if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             log_msg("Defeated detected cancelling the revive...", log_widget)
             # if find_and_click(IMAGES["cancel"], log_widget=log_widget):
-            while state.get("running", False) and pyautogui.locateOnScreen(IMAGES['defeat_elixir'], confidence=CONFIDENCE) and state.get("error_detected", False) is False:
-                time.sleep(SLEEP)
-                if find_text(['continue'], log_widget=log_widget) is False:
-                    break
-                else:
-                    find_and_click(IMAGES['cancel'], robust=False, optional=True, log_widget=log_widget)
+            time.sleep(SLEEP)
+            # while state.get("running", False) and pyautogui.locateOnScreen(IMAGES['defeat_elixir'], confidence=CONFIDENCE) and not state.get("error_detected", False):
+            #     if find_text(['continue'], log_widget=log_widget) is False:
+            #         break
+            #     else:
+            find_and_click(IMAGES['cancel'], robust=True, optional=True, timeout=5, log_widget=log_widget)
+            time.sleep(SLEEP)
             if rescue_active or host_raid:
                 log_msg("Rescue is exist and enabled or Hosting a raid - clicking cancel to wait for battle end", log_widget)
                 # find_and_click(IMAGES['cancel'], log_widget=log_widget)
