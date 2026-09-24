@@ -82,7 +82,7 @@ def _set_mode_buttons_state(state_value):
         btn_retry.configure(state=state_value)
         btn_episode.configure(state=state_value)
         btn_raid_farm.configure(state=state_value)
-        btn_union.configure(state=state_value)
+        # btn_union.configure(state=state_value)
         # btn_tower.configure(state=state_value)
     except Exception:
         pass
