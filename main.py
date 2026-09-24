@@ -93,6 +93,7 @@ def start_mode(mode_func, mode_name, *args):
     if not logic.state.get("running", False):
         logic.state["running"] = True
         logic.state["error_detected"] = False
+        logic.state["stuck_detected"] = False
         logic.state["active_sequence"] = mode_name
         logic.state["current_function"] = mode_func.__name__
         status_lbl.configure(text="RUNNING", text_color="green")
@@ -115,9 +116,20 @@ def start_mode(mode_func, mode_name, *args):
         # watcher thread to re-enable buttons and clear state when the mode finishes
         def _watch():
             t.join()
-            if logic.state.get("error_detected", False):
+            if logic.state.get("error_detected", False) or logic.state.get("stuck_detected", False):
+                browser_stuck = logic.state.get("stuck_detected", False)
                 logic.state["running"] = True
                 logic.state["error_detected"] = False
+                logic.state["stuck_detected"] = False
+
+                if browser_stuck:
+                    screen_width, screen_height = pyautogui.size()
+                    pyautogui.click(
+                        int(screen_width * 8 / 10),
+                        int(screen_height / 2),
+                    )
+                    pyautogui.press("f5")
+                    time.sleep(5)
 
                 threading.Thread(
                     target=logic.monitor_error,
@@ -125,7 +137,17 @@ def start_mode(mode_func, mode_name, *args):
                     daemon=True,
                 ).start()
 
-                while logic.state.get("running", False) and not pyautogui.locateOnScreen(IMAGES["quest"], confidence=0.80):
+                if browser_stuck and IMAGES.get("start_game"):
+                    logic.find_and_click(
+                        IMAGES["start_game"],
+                        optional=True,
+                        timeout=15.0,
+                        log_widget=detector_log,
+                    )
+
+                time.sleep(5)
+
+                while logic.state.get("running", False) and not logic.locate_on_screen(IMAGES["quest"], confidence=0.80):
                     pyautogui.click(x=1362, y=180)
                     time.sleep(1)
 

@@ -1,6 +1,6 @@
 import time
 import pyautogui
-from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina, post_battle, scroll_down, find_and_click_text, click_union_stage_slot
+from .core import state, _inc_loop, log_msg, find_and_click, next_page, find_text, find_and_click_all, wait, check_stamina, post_battle, scroll_down, find_and_click_text, click_union_stage_slot, locate_on_screen
 from .battle import combat_sequence, ongoing_battle
 from config import SLEEP, CONFIDENCE, CONNECTING, DIFFICULTIES, ALL_POSSIBLE_DIFFS, ELEMENTS, get_img
 
@@ -74,7 +74,7 @@ def quest_rush(IMAGES, log_widget=None):
                         new_chapter = True
                         
                         # check if the world is finished
-                        if pyautogui.locateOnScreen(IMAGES['next_page'], confidence=CONFIDENCE):
+                        if locate_on_screen(IMAGES['next_page'], confidence=CONFIDENCE):
                             OFFSET = -120 # for 1920x1080 resolution currently (negative = above ; positive = below)
                             find_and_click(IMAGES['new_world'], log_widget=log_widget, offset=OFFSET, robust=False)
                             find_and_click(IMAGES['go'], log_widget=log_widget)
@@ -100,12 +100,12 @@ def epic_quest_rush(IMAGES, log_widget=None):
             check_stamina(IMAGES, log_widget=log_widget)
 
             while state.get("running", False) and state.get("error_detected", False) is False:
-                if IMAGES.get('skip') and pyautogui.locateOnScreen(IMAGES['skip'], confidence=CONFIDENCE):
+                if IMAGES.get('skip') and locate_on_screen(IMAGES['skip'], confidence=CONFIDENCE):
                     log_msg("Branch: Story, skipping...", log_widget)
                     find_and_click(IMAGES['skip'], log_widget=log_widget)
                     find_and_click(IMAGES['skip_confirm'], log_widget=log_widget)
                     break
-                if IMAGES.get('support') and pyautogui.locateOnScreen(IMAGES['support'], confidence=CONFIDENCE):
+                if IMAGES.get('support') and locate_on_screen(IMAGES['support'], confidence=CONFIDENCE):
                     log_msg("Branch: Battle, starting combat sequence...", log_widget)
                     combat_sequence(IMAGES, log_widget)
                     break
@@ -136,7 +136,7 @@ def episode_rush(IMAGES, log_widget=None):
                     if find_and_click(IMAGES['cancel'], optional=True):
                         log_msg("Countermeasure loading too long already completed episode")
                     
-                    if pyautogui.locateOnScreen(IMAGES['ep_encounter'], confidence=0.99) and encounter:
+                    if locate_on_screen(IMAGES['ep_encounter'], confidence=0.99) and encounter:
                         find_and_click(IMAGES['ep_encounter'], log_widget=log_widget, confidence=0.99)
                         encounter = False
                         if find_and_click(IMAGES['cancel'], optional=True, log_widget=log_widget, timeout=3.0):
@@ -244,13 +244,13 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                         log_msg("Entry blocked", log_widget)
                         find_and_click(IMAGES.get("ok"), log_widget=log_widget)
                         # Wait until the OK button disappears before continuing
-                        while pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
+                        while locate_on_screen(IMAGES["ok"], confidence=CONFIDENCE):
                             time.sleep(0.2)
                         state["completed_raids"][element][difficulty] += 1
                         break
 
                     # Only check for challenge/ok if not blocked
-                    if IMAGES.get("challenge") and pyautogui.locateOnScreen(IMAGES["challenge"], confidence=CONFIDENCE):
+                    if IMAGES.get("challenge") and locate_on_screen(IMAGES["challenge"], confidence=CONFIDENCE):
                         state["completed_raids"][element][difficulty] += 1
                         log_msg("Entry is possible (challenge)", log_widget)
                         find_and_click(IMAGES["challenge"], log_widget=log_widget)
@@ -264,7 +264,7 @@ def raid_host(IMAGES, ELEMENTS, get_img, log_widget=None):
                         find_and_click(IMAGES['return_raid'], optional=True, log_widget=log_widget) #making this optional because the post battle sometimes false positive the return button as ok button
                         continue
 
-                    elif IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE):
+                    elif IMAGES.get("ok") and locate_on_screen(IMAGES["ok"], confidence=CONFIDENCE):
                         state["completed_raids"][element][difficulty] += 1
                         log_msg("Entry is possible (ok)", log_widget)
                         find_and_click(IMAGES["ok"], log_widget=log_widget)
@@ -314,11 +314,11 @@ def farm_raid(IMAGES, ELEMENTS, get_img, log_widget=None):
                 if find_and_click_all(raid_image, confidence=0.90, log_widget=log_widget, source_img=True) is True:
                     if combat_sequence(IMAGES, log_widget=log_widget, is_raid=True) is not False:
                         # when battle ran out of time, click ok just throws you back to raid list
-                        if pyautogui.locateOnScreen(IMAGES['raid_event']):
+                        if locate_on_screen(IMAGES['raid_event']):
                             break
                         find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True, timeout=2.0)
                         # fail safe measure if stuck in post battle credit
-                        while pyautogui.locateOnScreen(IMAGES['raid_event']) is False and state.get("running", False):
+                        while locate_on_screen(IMAGES['raid_event']) is False and state.get("running", False):
                             post_battle(IMAGES, log_widget=log_widget, confidence=0.85)
                             find_and_click(IMAGES['return_raid_battle'], log_widget=log_widget, optional=True)
                             time.sleep(SLEEP)

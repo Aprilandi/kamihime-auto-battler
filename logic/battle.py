@@ -1,6 +1,6 @@
 import time
 import pyautogui
-from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_text, find_and_click_text, wait, check_stamina
+from .core import state, log_msg, _inc_loop, find_and_click, post_battle, find_text, find_and_click_text, wait, check_stamina, locate_on_screen
 from config import SLEEP, CONFIDENCE
 
 def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_support=True, isPostBattle = True):
@@ -29,13 +29,13 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
         wait(log_widget=log_widget, timeout=0.5)
 
         # Pop up raid already ended before entering the battle (after selecting party)
-        if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
+        if locate_on_screen(IMAGES['ok'], confidence=CONFIDENCE):
             log_msg("Raid already ended - OK button found.", log_widget=log_widget)
             find_and_click(IMAGES['ok'], log_widget=log_widget)
             wait(log_widget=log_widget)
             time.sleep(1)
             # Pop up raid already ended in battle (when successfully entered the battle where there is still the animation and the boss has already died before you can do anything)
-            if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE) is False:
+            if locate_on_screen(IMAGES['ok'], confidence=CONFIDENCE) is False:
                 return False
 
         # check_stamina(IMAGES, log_widget=log_widget)
@@ -47,7 +47,7 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
                 find_and_click(IMAGES['reload'], optional=True, log_widget=log_widget)
                 break
             
-            if pyautogui.locateOnScreen(IMAGES.get('support_req'), confidence=CONFIDENCE):
+            if locate_on_screen(IMAGES.get('support_req'), confidence=CONFIDENCE):
                 if is_support:
                     find_and_click(IMAGES['support_req'], log_widget=log_widget, robust=False)
                 else:
@@ -58,11 +58,11 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
                 log_msg("Attack button found and clicked", log_widget)
                 break
             
-            if pyautogui.locateOnScreen(IMAGES['raid_event'], confidence=CONFIDENCE):
+            if locate_on_screen(IMAGES['raid_event'], confidence=CONFIDENCE):
                 log_msg("Failsafe measure Raid ended.", log_widget)
                 return False
             
-            if IMAGES.get("return_raid") and pyautogui.locateOnScreen(IMAGES["return_raid"], confidence=CONFIDENCE):
+            if IMAGES.get("return_raid") and locate_on_screen(IMAGES["return_raid"], confidence=CONFIDENCE):
                 log_msg("Failsafe measure Raid ended. Returning to raid list", log_widget)
                 return True
 
@@ -73,7 +73,7 @@ def combat_sequence(IMAGES, log_widget=None, host_raid=False, is_raid=False, is_
             time.sleep(SLEEP)
             
         user_allows_rescue = state.get("rescue", True)
-        rescue_present = IMAGES.get("rescue") and pyautogui.locateOnScreen(IMAGES["rescue"], confidence=CONFIDENCE)
+        rescue_present = IMAGES.get("rescue") and locate_on_screen(IMAGES["rescue"], confidence=CONFIDENCE)
         rescue_active = bool(user_allows_rescue and rescue_present)
 
         if rescue_present:
@@ -96,7 +96,7 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
     start_time = time.time()
 
     while state.get("running", False) and state.get("error_detected", False) is False:
-        if IMAGES.get("defeat_elixir") and pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
+        if IMAGES.get("defeat_elixir") and locate_on_screen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             log_msg("Defeated detected cancelling the revive...", log_widget)
             # if find_and_click(IMAGES["cancel"], log_widget=log_widget):
             time.sleep(SLEEP)
@@ -121,19 +121,19 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
                     return False
             break
         
-        if IMAGES.get("return") and pyautogui.locateOnScreen(IMAGES["return"], confidence=CONFIDENCE):
+        if IMAGES.get("return") and locate_on_screen(IMAGES["return"], confidence=CONFIDENCE):
             log_msg("Battle ended - Return button found", log_widget)
             break
         
-        if IMAGES.get("retry") and pyautogui.locateOnScreen(IMAGES["retry"], confidence=CONFIDENCE):
+        if IMAGES.get("retry") and locate_on_screen(IMAGES["retry"], confidence=CONFIDENCE):
             log_msg("Battle ended - Retry button found", log_widget)
             break
         
-        if IMAGES.get("return_raid") and pyautogui.locateOnScreen(IMAGES["return_raid"], confidence=CONFIDENCE):
+        if IMAGES.get("return_raid") and locate_on_screen(IMAGES["return_raid"], confidence=CONFIDENCE):
             log_msg("Battle ended - Return Raid button found", log_widget)
             break
         
-        if IMAGES.get("ok") and pyautogui.locateOnScreen(IMAGES["ok"], confidence=CONFIDENCE) and not pyautogui.locateOnScreen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
+        if IMAGES.get("ok") and locate_on_screen(IMAGES["ok"], confidence=CONFIDENCE) and not locate_on_screen(IMAGES["defeat_elixir"], confidence=CONFIDENCE):
             if find_text(['subjugation?'], log_widget=log_widget):
                 log_msg("Rescue available, completing...", log_widget)
                 find_and_click(IMAGES['ok'], log_widget=log_widget, robust=False, optional=True)
@@ -145,17 +145,17 @@ def wait_for_battle_end(IMAGES, log_widget=None, rescue_active=False, host_raid=
 
         if (time.time() - start_time) >= timeout:
             log_msg("Probably connection lost, reloading...", log_widget)
-            if find_and_click(IMAGES['reload'], optional=True, log_widget=log_widget):
+            if find_and_click(IMAGES['reload'], robust=True, log_widget=log_widget):
                 time.sleep(5.0)
 
                 if find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget):
                     log_msg("Battle either ended or connection lost...", log_widget=log_widget)
                     while state.get("running", False) and state.get("error_detected", False) is False:
                         find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True) # If there are scoreboard
-                        if IMAGES.get('return_raid_battle') and pyautogui.locateOnScreen(IMAGES['return_raid_battle'], confidence=CONFIDENCE):
+                        if IMAGES.get('return_raid_battle') and locate_on_screen(IMAGES['return_raid_battle'], confidence=CONFIDENCE):
                             log_msg("Battle already ended, returning to raid quest list", log_widget=log_widget)
                             break
-                        if IMAGES.get('start_game') and pyautogui.locateOnScreen(IMAGES['start_game'], confidence=CONFIDENCE):
+                        if IMAGES.get('start_game') and locate_on_screen(IMAGES['start_game'], confidence=CONFIDENCE):
                             find_and_click(IMAGES['start_game'], log_widget=log_widget)
                             log_msg("Connection lost, returning to main page going to raid quests", log_widget=log_widget)
                             if find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget):
@@ -183,12 +183,12 @@ def ongoing_battle(IMAGES, log_widget=None, timeout=1.5):
             log_msg("No ongoing battle detected", log_widget)
             return False
 
-        if IMAGES.get("ongoing") and pyautogui.locateOnScreen(IMAGES["ongoing"], confidence=0.99):
+        if IMAGES.get("ongoing") and locate_on_screen(IMAGES["ongoing"], confidence=0.99):
             log_msg("Ongoing battle detected", log_widget)
             find_and_click(IMAGES['cancel'], log_widget=log_widget)
             return True
         
-        if IMAGES.get("batch") and pyautogui.locateOnScreen(IMAGES["batch"], confidence=CONFIDENCE):
+        if IMAGES.get("batch") and locate_on_screen(IMAGES["batch"], confidence=CONFIDENCE):
             log_msg("Completed battle detected, completing via batch...", log_widget)
             find_and_click(IMAGES['batch'], log_widget=log_widget)
             # time.sleep(2.5)

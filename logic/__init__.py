@@ -16,7 +16,8 @@ from .core import (
     find_and_click_all,
     find_text,
     check_stamina,
-    wait
+    wait,
+    locate_on_screen,
 )
 from .battle import combat_sequence, wait_for_battle_end, ongoing_battle
 from .flows import farm_loop, quest_rush, epic_quest_rush, raid_host, episode_rush, farm_raid, union_event, recover_flow_start
@@ -54,5 +55,6 @@ __all__ = [
     "farm_raid",
     "union_event",
     "recover_flow_start",
-    "wait"
+    "wait",
+    "locate_on_screen",
 ]

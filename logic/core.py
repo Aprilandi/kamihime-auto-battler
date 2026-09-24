@@ -7,6 +7,7 @@ from PIL import Image
 import pytesseract
 import re
 import logging
+import threading
 
 # Path relative to your project
 pytesseract.pytesseract.tesseract_cmd = resource_path(
@@ -20,10 +21,24 @@ state = {
     "raid_settings": {},
     "completed_raids": {},
     "error_detected": False,
+    "stuck_detected": False,
     "current_function": None,
 }
 CONFIDENCE = 0.8
 SLEEP = 1.0
+screen_lock = threading.RLock()
+
+
+def locate_on_screen(*args, **kwargs):
+    """Serialize screen captures shared by worker and monitor threads."""
+    with screen_lock:
+        return pyautogui.locateOnScreen(*args, **kwargs)
+
+
+def capture_screen(*args, **kwargs):
+    """Serialize screenshots shared by worker and monitor threads."""
+    with screen_lock:
+        return pyautogui.screenshot(*args, **kwargs)
 
 # Configure logging once at the start of your program
 logging.basicConfig(
@@ -51,20 +66,26 @@ def monitor_error(IMAGES, interval=1.0, log_widget=None):
             close_image = IMAGES.get("close")
             close_image = bool(
                 close_image
-                and pyautogui.locateOnScreen(close_image, confidence=CONFIDENCE)
+                and locate_on_screen(close_image, confidence=CONFIDENCE)
             )
             screen_text = ""
             if not close_image:
                 log_msg("Monitor: Close not found.", log_widget)
             else:
-                log_msg("Monitor: Cancel found; checking OCR.", log_widget)
-                screenshot = pyautogui.screenshot()
-                screen_text = pytesseract.image_to_string(screenshot).lower()
+                log_msg("Monitor: Close found; checking OCR.", log_widget)
+                screen_image = capture_screen()
+                screen_text = pytesseract.image_to_string(screen_image).lower()
 
             if close_image and "an error" in screen_text:
-                find_and_click(IMAGES['close'], log_widget=log_widget)
-                state["error_detected"] = True
+                start_time = time.time()
+                while (time.time() - start_time) < 5:
+                    if locate_on_screen(IMAGES['close'], confidence=CONFIDENCE):
+                        find_and_click(IMAGES['close'], log_widget=log_widget)
+                        start_time = time.time()
+                    time.sleep(SLEEP)
+                    
                 state["running"] = False
+                state["error_detected"] = True
                 log_msg(f"Stopping the active flow: {state.get('current_function')}", log_widget)
                 return
         except Exception as exc:
@@ -175,7 +196,7 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
     clicked = False
     
     while state.get("running", False): 
-        btn = pyautogui.locateOnScreen(target_img, confidence=confidence)
+        btn = locate_on_screen(target_img, confidence=confidence)
 
         if btn and not robust:
             log_msg(f"Found {name} (Non Robust), clicking", log_widget) 
@@ -232,7 +253,7 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
 
             time.sleep(0.5)
 
-            found_still = pyautogui.locateOnScreen(target_img, region=region, confidence=confidence)
+            found_still = locate_on_screen(target_img, region=region, confidence=confidence)
             
             if not found_still:
                 log_msg(f"Button {name} disappeared, assumed success.", log_widget)
@@ -240,6 +261,15 @@ def find_and_click(image, confidence=CONFIDENCE, timeout=1.0, optional=False, lo
                 return True
             else:
                 log_msg(f"Button {name} still visible, will try clicking again...", log_widget)
+
+            if not optional and clicked and time.time() - start_time >= 300:
+                log_msg(
+                    f"Button {name} remained visible for 5 minutes; marking the browser as stuck.",
+                    log_widget,
+                )
+                state["stuck_detected"] = True
+                state["running"] = False
+                return False
         
         if optional: 
             elapsed = time.time() - start_time 
@@ -282,7 +312,7 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
         
         # 2. Check if 'In Battle' exists INSIDE this specific raid banner area
         # We limit the search region to speed it up and avoid finding other raids
-        is_busy = pyautogui.locateOnScreen(
+        is_busy = locate_on_screen(
             IMAGES['in_battle'], 
             region=(raid_box.left- 20, raid_box.top - 20, raid_box.width + 20, raid_box.height + 20),
             confidence=CONFIDENCE
@@ -310,17 +340,17 @@ def find_and_click_all(image, confidence=CONFIDENCE, timeout=1.0, optional=False
                 find_and_click(IMAGES['ok'], optional=True, timeout=3.0, log_widget=log_widget)
                 pyautogui.click(pyautogui.center(raid_box))
 
-            if pyautogui.locateOnScreen(IMAGES['cancel'], confidence=CONFIDENCE) \
+            if locate_on_screen(IMAGES['cancel'], confidence=CONFIDENCE) \
                 and find_text(['an error'], log_widget=log_widget) is True \
-                and not pyautogui.locateOnScreen(IMAGES['stamina_use'], confidence=CONFIDENCE) \
-                and not pyautogui.locateOnScreen(IMAGES['batch'], confidence=CONFIDENCE):
+                and not locate_on_screen(IMAGES['stamina_use'], confidence=CONFIDENCE) \
+                and not locate_on_screen(IMAGES['batch'], confidence=CONFIDENCE):
                 find_and_click(IMAGES['cancel'], log_widget=log_widget)
                 find_and_click(IMAGES['ok'], log_widget=log_widget, optional=True)
                 find_and_click(IMAGES['start_game'], log_widget=log_widget, optional=True)
                 find_and_click(IMAGES['raid_quest_available'], log_widget=log_widget)
                 return False
 
-            if pyautogui.locateOnScreen(IMAGES['support'], confidence=CONFIDENCE):
+            if locate_on_screen(IMAGES['support'], confidence=CONFIDENCE):
                 return True
 
             time.sleep(SLEEP)
@@ -353,7 +383,7 @@ def next_page(IMAGES, log_widget=None):
     """Go to the next page in menus.
     """
     log_msg("Navigating to next page", log_widget)
-    if IMAGES.get('down_max') and pyautogui.locateOnScreen(IMAGES['down_max'], confidence=0.99):
+    if IMAGES.get('down_max') and locate_on_screen(IMAGES['down_max'], confidence=0.99):
         log_msg("Reached end of page.")
         return False
     else:
@@ -365,13 +395,13 @@ def next_page(IMAGES, log_widget=None):
 
 def scroll_down(list_region, log_widget=None, scroll_x = 600, scroll_y = 420):
     log_msg("Scrolling down...", log_widget=log_widget)
-    before = pyautogui.screenshot()
+    before = capture_screen()
 
     pyautogui.moveTo(scroll_x, scroll_y)
     pyautogui.scroll(-120)
     time.sleep(SLEEP)
     
-    after = pyautogui.screenshot()
+    after = capture_screen()
     
     # if screenshots are identical, we've hit the bottom
     if screenshots_are_same(before, after, list_region):
@@ -390,8 +420,8 @@ def screenshots_are_same(img1, img2, region, threshold=0.99):
 
 
 def find_text(texts, log_widget=None):
-    screenshot = pyautogui.screenshot()
-    text_image = pytesseract.image_to_string(screenshot).lower()
+    screen_image = capture_screen()
+    text_image = pytesseract.image_to_string(screen_image).lower()
 
     # Return True only when all provided words are present in the screen text
     for t in texts:
@@ -408,8 +438,8 @@ def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None, ind
 
     log_msg(f"Searching text {texts}...", log_widget)
     while state.get("running", False):
-        screenshot = pyautogui.screenshot()
-        data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
+        screen_image = capture_screen()
+        data = pytesseract.image_to_data(screen_image, output_type=pytesseract.Output.DICT)
         matches = []
 
         if phrase and len(texts) > 1:
@@ -503,8 +533,8 @@ def find_and_click_text(texts, timeout=1.0, optional=False, log_widget=None, ind
         
 def get_all_visible_text(log_widget=None):
     """Capture a screenshot and extract all visible text using OCR for debugging purposes."""
-    screenshot = pyautogui.screenshot()
-    text = pytesseract.image_to_string(screenshot)
+    screen_image = capture_screen()
+    text = pytesseract.image_to_string(screen_image)
     log_msg(f"All visible text on screen:\n{text}", log_widget)
     # if find_text(['element'], log_widget=log_widget):
     #     log_msg("True", log_widget=log_widget)
@@ -538,7 +568,7 @@ def click_union_stage_slot(slot_index, log_widget=None):
     
     wait(log_widget=log_widget)
 
-    if pyautogui.locateOnScreen(IMAGES['ok'], confidence=CONFIDENCE):
+    if locate_on_screen(IMAGES['ok'], confidence=CONFIDENCE):
         return False
      
     return True
@@ -550,12 +580,12 @@ def wait(timeout=3.0, sleep=0.1, log_widget=None, attempts=2):
     start_time = time.time()
     
     while state.get("running", False):
-        is_detected = CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE)
+        is_detected = CONNECTING and locate_on_screen(CONNECTING, confidence=CONFIDENCE)
         
         if is_detected:
             misses = 0
             log_msg("Detected CONNECTING, waiting...", log_widget)
-            while CONNECTING and pyautogui.locateOnScreen(CONNECTING, confidence=CONFIDENCE):
+            while CONNECTING and locate_on_screen(CONNECTING, confidence=CONFIDENCE):
                 time.sleep(sleep)
                 if (time.time() - start_time) > timeout:
                     return
@@ -580,7 +610,7 @@ def check_stamina(IMAGES, log_widget=None, timeout=1.5):
             log_msg("Stamina or BP is still sufficient", log_widget)
             return False
 
-        if (IMAGES.get('stamina_check') and pyautogui.locateOnScreen(IMAGES['stamina_check'], confidence=CONFIDENCE)) or (IMAGES.get('bp_check') and pyautogui.locateOnScreen(IMAGES['bp_check'], confidence=CONFIDENCE)):
+        if (IMAGES.get('stamina_check') and locate_on_screen(IMAGES['stamina_check'], confidence=CONFIDENCE)) or (IMAGES.get('bp_check') and locate_on_screen(IMAGES['bp_check'], confidence=CONFIDENCE)):
             log_msg("Stamina or BP low detected", log_widget)
             if find_and_click(IMAGES['stamina_use'], log_widget=log_widget, robust=False) is True:
                 find_and_click(IMAGES['ok'], log_widget=log_widget)
@@ -590,8 +620,8 @@ def check_stamina(IMAGES, log_widget=None, timeout=1.5):
 
 
 def test_function(texts, timeout=1.0, optional=False, log_widget=None):
-    screenshot = pyautogui.screenshot()
-    data = pytesseract.image_to_data(screenshot, output_type=pytesseract.Output.DICT)
+    screen_image = capture_screen()
+    data = pytesseract.image_to_data(screen_image, output_type=pytesseract.Output.DICT)
     start_time = time.time()
     log_msg(f"Searching text {texts}...", log_widget)
 
